@@ -35,7 +35,7 @@ export default function Home() {
         theme="colored"
       />
 
-      <Template3 />
+      <Template4 />
       {/* <Template2 /> */}
       {/* <Template3 /> */}
       {/* <Template4 /> */}
