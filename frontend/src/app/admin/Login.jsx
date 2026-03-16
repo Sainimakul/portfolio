@@ -149,21 +149,6 @@ export default function Login({ onLogin }) {
 
                 </form>
 
-                <div className="text-center text-xs text-gray-400">
-
-                    <p>Demo credentials:</p>
-
-                    <div className="flex justify-center gap-3 mt-1">
-
-                        <code className="bg-gray-100 px-2 py-1 rounded">
-                            admin@example.com
-                        </code>
-
-                        <code className="bg-gray-100 px-2 py-1 rounded">
-                            password123
-                        </code>
-
-                    </div>
 
                 </div>
 
