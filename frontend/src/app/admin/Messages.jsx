@@ -4,13 +4,28 @@ import  {getMessages,deleteMessage } from "../../../service/adminapi"
 import { toast } from "./component/Toast"
 import { Modal } from "./component/Modal"
 import dynamic from "next/dynamic"
-
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 
 function formatDate(dateStr) {
   if (!dateStr) return ""
   return new Date(dateStr).toLocaleString()
+}
+
+function RichEditor({ value, onChange }) {
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: value,
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+  });
+
+  return (
+    <div className="border rounded bg-white p-2 min-h-[150px]">
+      <EditorContent editor={editor} />
+    </div>
+  );
 }
 
 export default function Messages() {
@@ -47,11 +62,11 @@ export default function Messages() {
 
     setSending(true)
     try {
-      await sendReply({
-        to: selected.email,
-        subject: `Re: ${selected.subject || "Your message"}`,
-        message: reply
-      })
+      // await sendReply({
+      //   to: selected.email,
+      //   subject: `Re: ${selected.subject || "Your message"}`,
+      //   message: reply
+      // })
 
       toast.success("Reply sent")
       setSelected(null)
@@ -155,11 +170,7 @@ export default function Messages() {
               <label className="text-sm font-medium">Reply</label>
 
               <div className="mt-2">
-                <ReactQuill
-                  value={reply}
-                  onChange={setReply}
-                  className="bg-white"
-                />
+                <RichEditor value={reply} onChange={setReply} />
               </div>
             </div>
 
