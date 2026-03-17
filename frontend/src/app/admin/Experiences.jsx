@@ -165,63 +165,51 @@ export default function Experiences() {
 
   }
 
-  return (
+return (
+  <div className="space-y-6 text-black">
 
-    <div className="space-y-6 text-black">
+    {/* Header */}
+    <div>
+      <h2 className="text-xl md:text-2xl font-bold">Experiences</h2>
+      <p className="text-gray-500 text-sm md:text-base">
+        Manage your work experience
+      </p>
+    </div>
 
-      <div>
+    <div className="bg-white rounded-xl shadow">
 
-        <h2 className="text-2xl font-bold">Experiences</h2>
+      {/* Top Bar */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-5 border-b">
 
-        <p className="text-gray-500">
-          Manage your work experience
-        </p>
+        <h3 className="font-semibold text-sm md:text-base">
+          All Experiences ({items.length})
+        </h3>
+
+        <button
+          onClick={openAdd}
+          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto"
+        >
+          + Add Experience
+        </button>
 
       </div>
 
-      <div className="bg-white rounded-xl shadow">
-
-        <div className="flex justify-between items-center p-5 border-b">
-
-          <h3 className="font-semibold">
-            All Experiences ({items.length})
-          </h3>
-
-          <button
-            onClick={openAdd}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            + Add Experience
-          </button>
-
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
-
-        {loading ? (
-
-          <div className="flex justify-center py-16">
-
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-
-          </div>
-
-        ) : items.length === 0 ? (
-
-          <div className="text-center py-16 text-gray-400">
-
-            <div className="text-4xl mb-3">💼</div>
-
-            <p>No experiences yet</p>
-
-          </div>
-
-        ) : (
-
-          <div className="overflow-x-auto">
-
+      ) : items.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <div className="text-4xl mb-3">💼</div>
+          <p>No experiences yet</p>
+        </div>
+      ) : (
+        <>
+          {/* 🔥 Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
 
               <thead className="bg-gray-50 text-left">
-
                 <tr>
                   <th className="p-3">Role</th>
                   <th className="p-3">Company</th>
@@ -230,11 +218,9 @@ export default function Experiences() {
                   <th className="p-3">Points</th>
                   <th className="p-3">Actions</th>
                 </tr>
-
               </thead>
 
               <tbody>
-
                 {items.map(exp => {
 
                   const points =
@@ -245,35 +231,26 @@ export default function Experiences() {
                       : [];
 
                   return (
-
                     <tr key={exp.id} className="border-t">
 
-                      <td className="p-3 font-medium">
-                        {exp.role}
-                      </td>
+                      <td className="p-3 font-medium">{exp.role}</td>
 
-                      <td className="p-3 text-gray-500">
-                        {exp.company}
-                      </td>
+                      <td className="p-3 text-gray-500">{exp.company}</td>
 
                       <td className="p-3 text-gray-500">
                         {truncate(exp.description, 60)}
                       </td>
 
                       <td className="p-3">
-
-                        {exp.start_date?.substring(0,10)} - {exp.is_current ? "Present" : exp.end_date?.substring(0,10)}
-
+                        {exp.start_date?.substring(0,10)} -{" "}
+                        {exp.is_current ? "Present" : exp.end_date?.substring(0,10)}
                       </td>
 
                       <td className="p-3 text-gray-500">
-
                         {points.slice(0,2).join(", ")}
-
                       </td>
 
                       <td className="p-3">
-
                         <div className="flex gap-2">
 
                           <button
@@ -291,172 +268,202 @@ export default function Experiences() {
                           </button>
 
                         </div>
-
                       </td>
 
                     </tr>
-
-                  )
-
+                  );
                 })}
-
               </tbody>
 
             </table>
-
           </div>
 
-        )}
+          {/* 🔥 Mobile Cards */}
+          <div className="md:hidden space-y-4 p-4">
 
-      </div>
+            {items.map(exp => {
 
-      {modal && (
+              const points =
+                typeof exp.points === "string"
+                  ? exp.points.split(",")
+                  : Array.isArray(exp.points)
+                  ? exp.points
+                  : [];
 
-        <Modal
-          title={modal === "add" ? "Add Experience" : "Edit Experience"}
-          onClose={() => setModal(null)}
-        >
+              return (
+                <div key={exp.id} className="border rounded-lg p-4 space-y-2 shadow-sm">
 
-          <form onSubmit={handleSave} className="space-y-4">
+                  <div className="font-semibold">{exp.role}</div>
 
-            <div>
+                  <div className="text-sm text-gray-500">
+                    {exp.company}
+                  </div>
 
-              <label className="text-sm font-medium">Role *</label>
+                  <div className="text-xs text-gray-400">
+                    {exp.start_date?.substring(0,10)} •{" "}
+                    {exp.is_current ? "Present" : exp.end_date?.substring(0,10)}
+                  </div>
 
-              <input
-                required
-                value={form.role}
-                onChange={e => setForm({ ...form, role: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 mt-1"
-              />
+                  <div className="text-sm text-gray-600">
+                    {truncate(exp.description, 80)}
+                  </div>
 
-            </div>
+                  <div className="text-xs text-gray-500">
+                    {points.slice(0,2).join(", ")}
+                  </div>
 
-            <div>
+                  <div className="flex gap-2 pt-2">
 
-              <label className="text-sm font-medium">Company *</label>
+                    <button
+                      onClick={() => openEdit(exp)}
+                      className="flex-1 px-3 py-2 text-xs bg-gray-200 rounded"
+                    >
+                      Edit
+                    </button>
 
-              <input
-                required
-                value={form.company}
-                onChange={e => setForm({ ...form, company: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 mt-1"
-              />
+                    <button
+                      onClick={() => handleDelete(exp.id)}
+                      className="flex-1 px-3 py-2 text-xs bg-red-500 text-white rounded"
+                    >
+                      Delete
+                    </button>
 
-            </div>
+                  </div>
 
-            <div>
+                </div>
+              );
+            })}
 
-              <label className="text-sm font-medium">Description</label>
-
-              <textarea
-                rows="3"
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 mt-1"
-              />
-
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-
-              <div>
-
-                <label className="text-sm font-medium">Start Date *</label>
-
-                <input
-                  type="date"
-                  required
-                  value={form.start_date}
-                  onChange={e => setForm({ ...form, start_date: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2 mt-1"
-                />
-
-              </div>
-
-              <div>
-
-                <label className="text-sm font-medium">End Date</label>
-
-                <input
-                  type="date"
-                  value={form.end_date}
-                  onChange={e => setForm({ ...form, end_date: e.target.value })}
-                  disabled={form.is_current}
-                  className="w-full border rounded-lg px-3 py-2 mt-1"
-                />
-
-              </div>
-
-            </div>
-
-            <div className="flex items-center gap-2">
-
-              <input
-                type="checkbox"
-                checked={form.is_current}
-                onChange={e =>
-                  setForm({ ...form, is_current: e.target.checked })
-                }
-              />
-
-              <label className="text-sm font-medium">
-                Currently working here
-              </label>
-
-            </div>
-
-            <div>
-
-              <label className="text-sm font-medium">Experience Points *</label>
-
-              <textarea
-                required
-                placeholder="Built scalable APIs, Optimized PostgreSQL queries"
-                value={(form.points || []).join(",")}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    points: e.target.value.split(",").map(v => v.trim())
-                  })
-                }
-                className="w-full border rounded-lg px-3 py-2 mt-1"
-              />
-
-              <p className="text-xs text-gray-400 mt-1">
-                Separate points with commas
-              </p>
-
-            </div>
-
-            <div className="flex justify-end gap-3 pt-3">
-
-              <button
-                type="button"
-                onClick={() => setModal(null)}
-                className="px-4 py-2 bg-gray-200 rounded-lg"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                {saving ? "Saving..." : "Save Experience"}
-              </button>
-
-            </div>
-
-          </form>
-
-        </Modal>
-
+          </div>
+        </>
       )}
 
     </div>
 
-  );
+    {/* 🔥 Modal */}
+    {modal && (
+      <Modal
+        title={modal === "add" ? "Add Experience" : "Edit Experience"}
+        onClose={() => setModal(null)}
+      >
+
+        <form onSubmit={handleSave} className="space-y-4">
+
+          <div>
+            <label className="text-sm font-medium">Role *</label>
+            <input
+              required
+              value={form.role}
+              onChange={e => setForm({ ...form, role: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Company *</label>
+            <input
+              required
+              value={form.company}
+              onChange={e => setForm({ ...form, company: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Description</label>
+            <textarea
+              rows="3"
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+            />
+          </div>
+
+          {/* 🔥 Responsive Dates */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div>
+              <label className="text-sm font-medium">Start Date *</label>
+              <input
+                type="date"
+                required
+                value={form.start_date}
+                onChange={e => setForm({ ...form, start_date: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">End Date</label>
+              <input
+                type="date"
+                value={form.end_date}
+                onChange={e => setForm({ ...form, end_date: e.target.value })}
+                disabled={form.is_current}
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+              />
+            </div>
+
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={form.is_current}
+              onChange={e =>
+                setForm({ ...form, is_current: e.target.checked })
+              }
+            />
+            <label className="text-sm font-medium">
+              Currently working here
+            </label>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Experience Points *</label>
+            <textarea
+              required
+              value={(form.points || []).join(",")}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  points: e.target.value.split(",").map(v => v.trim())
+                })
+              }
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Separate points with commas
+            </p>
+          </div>
+
+          {/* 🔥 Buttons */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-3">
+
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              className="px-4 py-2 bg-gray-200 rounded-lg w-full sm:w-auto"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto"
+            >
+              {saving ? "Saving..." : "Save Experience"}
+            </button>
+
+          </div>
+
+        </form>
+
+      </Modal>
+    )}
+
+  </div>
+)
 
 }

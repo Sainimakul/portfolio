@@ -1,175 +1,194 @@
-import React, { useState, useEffect } from "react";
-import * as adminApi from "../../../service/adminapi";
-import { toast } from "./component/Toast";
+"use client"
+import React, { useState, useEffect } from "react"
+import  {getMessages,deleteMessage } from "../../../service/adminapi"
+import { toast } from "./component/Toast"
+import { Modal } from "./component/Modal"
+import dynamic from "next/dynamic"
+
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
+import "react-quill/dist/quill.snow.css"
 
 function formatDate(dateStr) {
   if (!dateStr) return ""
-
-  const date = new Date(dateStr)
-
-  return date.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  })
+  return new Date(dateStr).toLocaleString()
 }
 
 export default function Messages() {
 
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState(null)
+  const [reply, setReply] = useState("")
+  const [sending, setSending] = useState(false)
 
   async function load() {
-
     setLoading(true)
-
     try {
-
-      const res = await adminApi.getMessages()
+      const res = await getMessages()
       setItems(res.data || [])
-
     } catch (err) {
-
       toast.error(err.message)
-
-    }
-    finally {
-
+    } finally {
       setLoading(false)
-
     }
-
   }
 
   useEffect(() => { load() }, [])
 
   async function handleDelete(id) {
-
     if (!confirm("Delete this message?")) return
+    await deleteMessage(id)
+    toast.success("Deleted")
+    load()
+  }
 
+  async function handleSendReply() {
+    if (!reply) return toast.error("Write something")
+
+    setSending(true)
     try {
+      await sendReply({
+        to: selected.email,
+        subject: `Re: ${selected.subject || "Your message"}`,
+        message: reply
+      })
 
-      await adminApi.deleteMessage(id)
-
-      toast.success("Message deleted")
-
-      load()
-
+      toast.success("Reply sent")
+      setSelected(null)
+      setReply("")
     } catch (err) {
-
       toast.error(err.message)
-
+    } finally {
+      setSending(false)
     }
-
   }
 
   return (
 
-    <div className="space-y-6 text-black">
+    <div className="h-full flex flex-col text-black">
 
-      <div>
-        <h2 className="text-2xl font-bold">Messages</h2>
-        <p className="text-gray-500">Contact form submissions from visitors</p>
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="text-xl md:text-2xl font-bold">Inbox</h2>
+        <p className="text-gray-500 text-sm">Manage user messages</p>
       </div>
 
-      {loading ? (
+      {/* Content */}
+      <div className="flex-1 bg-white rounded-xl shadow overflow-hidden">
 
-        <div className="flex justify-center py-20">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            📭 No messages
+          </div>
+        ) : (
 
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="divide-y">
 
-        </div>
+            {items.map(m => (
 
-      ) : items.length === 0 ? (
+              <div
+                key={m.id}
+                onClick={() => setSelected(m)}
+                className="p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center"
+              >
 
-        <div className="text-center py-20 text-gray-400">
-          <div className="text-4xl mb-3">📭</div>
-          <p>No messages yet. Share your portfolio!</p>
-        </div>
+                <div className="min-w-0">
 
-      ) : (
-
-        <div className="space-y-5">
-
-          {items.map(m => (
-
-            <div
-              key={m.id}
-              className="bg-white rounded-xl shadow p-5 space-y-4"
-            >
-
-              <div className="flex justify-between items-start">
-
-                <div>
-
-                  <strong className="block text-gray-900">
+                  <div className="font-medium truncate">
                     {m.name}
-                  </strong>
+                  </div>
 
-                  <a
-                    href={`mailto:${m.email}`}
-                    className="text-sm text-blue-600 hover:underline"
-
-                  >
-
-                    {m.email} </a>
+                  <div className="text-sm text-gray-500 truncate">
+                    {m.subject || m.message?.substring(0, 60)}
+                  </div>
 
                 </div>
 
-                <span className="text-xs text-gray-400">
+                <div className="text-xs text-gray-400 whitespace-nowrap">
                   {formatDate(m.created_at)}
-                </span>
+                </div>
 
               </div>
 
-              {m.subject && (
+            ))}
 
-                <div className="text-sm text-gray-700">
+          </div>
 
-                  <strong>Subject:</strong> {m.subject}
+        )}
 
+      </div>
+
+      {/* 🔥 Reply Modal */}
+      {selected && (
+
+        <Modal
+          title={`Reply to ${selected.name}`}
+          onClose={() => setSelected(null)}
+        >
+
+          <div className="space-y-4">
+
+            {/* Message Preview */}
+            <div className="bg-gray-50 p-3 rounded text-sm">
+
+              <div className="font-medium">{selected.name}</div>
+              <div className="text-gray-500 text-xs">{selected.email}</div>
+
+              {selected.subject && (
+                <div className="mt-2">
+                  <strong>Subject:</strong> {selected.subject}
                 </div>
-
               )}
 
-              <div className="text-gray-600 text-sm leading-relaxed">
-
-                {m.message}
-
-              </div>
-
-              <div className="flex gap-3 pt-2">
-
-                <a
-                  href={`mailto:${m.email}?subject=Re: ${m.subject || "Your message"}`}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-
-                >
-
-                  Reply ✉️ </a>
-
-                <button
-                  onClick={() => handleDelete(m.id)}
-                  className="px-3 py-1 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
-
-                >
-
-                  Delete </button>
-
-              </div>
+              <p className="mt-2 text-gray-600">
+                {selected.message}
+              </p>
 
             </div>
 
-          ))}
+            {/* Editor */}
+            <div>
+              <label className="text-sm font-medium">Reply</label>
 
-        </div>
+              <div className="mt-2">
+                <ReactQuill
+                  value={reply}
+                  onChange={setReply}
+                  className="bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-between items-center pt-2">
+
+              <button
+                onClick={() => handleDelete(selected.id)}
+                className="px-3 py-2 text-sm bg-red-500 text-white rounded"
+              >
+                Delete
+              </button>
+
+              <button
+                onClick={handleSendReply}
+                disabled={sending}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                {sending ? "Sending..." : "Send Reply"}
+              </button>
+
+            </div>
+
+          </div>
+
+        </Modal>
 
       )}
 
     </div>
-
   )
-
 }

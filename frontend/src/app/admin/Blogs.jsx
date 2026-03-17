@@ -135,272 +135,257 @@ export default function Blogs(){
 
   }
 
-  return(
-
+return (
   <div className="space-y-6 text-black">
 
+    {/* Header */}
     <div>
-      <h2 className="text-2xl font-bold">Blog Posts</h2>
-      <p className="text-gray-500">
+      <h2 className="text-xl md:text-2xl font-bold">Blog Posts</h2>
+      <p className="text-gray-500 text-sm md:text-base">
         Write and manage your articles
       </p>
     </div>
 
+    {/* Container */}
     <div className="bg-white rounded-xl shadow">
 
-      <div className="flex justify-between items-center p-5 border-b">
-
-        <h3 className="font-semibold">
+      {/* Top Bar */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-5 border-b">
+        <h3 className="font-semibold text-sm md:text-base">
           All Posts ({items.length})
         </h3>
 
         <button
           onClick={openAdd}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 w-full sm:w-auto"
         >
           + New Post
         </button>
-
       </div>
 
-      {loading?(
+      {/* Loading / Empty */}
+      {loading ? (
         <div className="p-10 text-center text-gray-500">
           Loading...
         </div>
-
-      ):items.length===0?(
-
+      ) : items.length === 0 ? (
         <div className="p-10 text-center text-gray-400">
           📝 No posts yet
         </div>
+      ) : (
+        <>
+          {/* 🔥 Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left">
+                <tr>
+                  <th className="p-3">Title</th>
+                  <th className="p-3">Category</th>
+                  <th className="p-3">Excerpt</th>
+                  <th className="p-3">Read Time</th>
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Actions</th>
+                </tr>
+              </thead>
 
-      ):(
+              <tbody>
+                {items.map(b => (
+                  <tr key={b.id} className="border-t">
+                    <td className="p-3 font-medium">{b.title}</td>
 
-      <div className="overflow-x-auto">
+                    <td className="p-3">
+                      <span className="px-2 py-1 text-xs bg-gray-100 rounded">
+                        {b.category || "General"}
+                      </span>
+                    </td>
 
-        <table className="w-full text-sm">
+                    <td className="p-3 text-gray-500">
+                      {truncate(b.excerpt, 60)}
+                    </td>
 
-          <thead className="bg-gray-50 text-left">
+                    <td className="p-3 text-gray-500">
+                      {b.read_time || "-"}
+                    </td>
 
-            <tr>
-              <th className="p-3">Title</th>
-              <th className="p-3">Category</th>
-              <th className="p-3">Excerpt</th>
-              <th className="p-3">Read Time</th>
-              <th className="p-3">Date</th>
-              <th className="p-3">Actions</th>
-            </tr>
+                    <td className="p-3 text-gray-500">
+                      {formatDate(b.publish_date)}
+                    </td>
 
-          </thead>
+                    <td className="p-3 space-x-2">
+                      <button
+                        onClick={() => openEdit(b)}
+                        className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
+                      >
+                        Edit
+                      </button>
 
-          <tbody>
+                      <button
+                        onClick={() => handleDelete(b.id)}
+                        className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            {items.map(b=>(
+          {/* 🔥 Mobile Cards */}
+          <div className="md:hidden space-y-4 p-4">
+            {items.map(b => (
+              <div key={b.id} className="border rounded-lg p-4 space-y-2 shadow-sm">
 
-              <tr key={b.id} className="border-t">
+                <div className="font-semibold">{b.title}</div>
 
-                <td className="p-3 font-medium">
-                  {b.title}
-                </td>
+                <div className="text-xs text-gray-500">
+                  {formatDate(b.publish_date)} • {b.read_time || "-"}
+                </div>
 
-                <td className="p-3">
+                <div className="text-sm text-gray-600">
+                  {truncate(b.excerpt, 80)}
+                </div>
+
+                <div>
                   <span className="px-2 py-1 text-xs bg-gray-100 rounded">
-                    {b.category||"General"}
+                    {b.category || "General"}
                   </span>
-                </td>
+                </div>
 
-                <td className="p-3 text-gray-500">
-                  {truncate(b.excerpt,60)}
-                </td>
-
-                <td className="p-3 text-gray-500">
-                  {b.read_time||"-"}
-                </td>
-
-                <td className="p-3 text-gray-500">
-                  {formatDate(b.publish_date)}
-                </td>
-
-                <td className="p-3 space-x-2">
-
+                <div className="flex gap-2 pt-2">
                   <button
-                    onClick={()=>openEdit(b)}
-                    className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
+                    onClick={() => openEdit(b)}
+                    className="flex-1 px-3 py-2 text-xs bg-gray-200 rounded"
                   >
                     Edit
                   </button>
 
                   <button
-                    onClick={()=>handleDelete(b.id)}
-                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                    onClick={() => handleDelete(b.id)}
+                    className="flex-1 px-3 py-2 text-xs bg-red-500 text-white rounded"
                   >
                     Delete
                   </button>
+                </div>
 
-                </td>
-
-              </tr>
-
+              </div>
             ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
+          </div>
+        </>
       )}
-
     </div>
 
-    {modal &&(
-
+    {/* 🔥 Modal */}
+    {modal && (
       <Modal
-        title={modal==="add"?"New Blog Post":"Edit Blog Post"}
-        onClose={()=>setModal(null)}
+        title={modal === "add" ? "New Blog Post" : "Edit Blog Post"}
+        onClose={() => setModal(null)}
       >
 
-      <form onSubmit={handleSave} className="space-y-4">
-
-        <div>
-
-          <label className="text-sm font-medium">
-            Title *
-          </label>
-
-          <input
-            required
-            value={form.title}
-            onChange={e=>setForm({...form,title:e.target.value})}
-            className="w-full mt-1 border rounded-lg px-3 py-2"
-            placeholder="My Blog Post"
-          />
-
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSave} className="space-y-4">
 
           <div>
-
-            <label className="text-sm font-medium">
-              Slug
-            </label>
-
+            <label className="text-sm font-medium">Title *</label>
             <input
-              value={form.slug}
-              onChange={e=>setForm({...form,slug:e.target.value})}
+              required
+              value={form.title}
+              onChange={e => setForm({ ...form, title: e.target.value })}
               className="w-full mt-1 border rounded-lg px-3 py-2"
             />
+          </div>
+
+          {/* 🔥 Responsive Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div>
+              <label className="text-sm font-medium">Slug</label>
+              <input
+                value={form.slug}
+                onChange={e => setForm({ ...form, slug: e.target.value })}
+                className="w-full mt-1 border rounded-lg px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Category</label>
+              <input
+                value={form.category}
+                onChange={e => setForm({ ...form, category: e.target.value })}
+                className="w-full mt-1 border rounded-lg px-3 py-2"
+              />
+            </div>
+
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div>
+              <label className="text-sm font-medium">Read Time</label>
+              <input
+                value={form.read_time}
+                onChange={e => setForm({ ...form, read_time: e.target.value })}
+                className="w-full mt-1 border rounded-lg px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Publish Date</label>
+              <input
+                type="date"
+                value={form.publish_date}
+                onChange={e => setForm({ ...form, publish_date: e.target.value })}
+                className="w-full mt-1 border rounded-lg px-3 py-2"
+              />
+            </div>
 
           </div>
 
           <div>
-
-            <label className="text-sm font-medium">
-              Category
-            </label>
-
+            <label className="text-sm font-medium">Excerpt</label>
             <input
-              value={form.category}
-              onChange={e=>setForm({...form,category:e.target.value})}
+              value={form.excerpt}
+              onChange={e => setForm({ ...form, excerpt: e.target.value })}
               className="w-full mt-1 border rounded-lg px-3 py-2"
             />
-
-          </div>
-
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-
-          <div>
-
-            <label className="text-sm font-medium">
-              Read Time
-            </label>
-
-            <input
-              value={form.read_time}
-              onChange={e=>setForm({...form,read_time:e.target.value})}
-              placeholder="5 min read"
-              className="w-full mt-1 border rounded-lg px-3 py-2"
-            />
-
           </div>
 
           <div>
-
-            <label className="text-sm font-medium">
-              Publish Date
-            </label>
-
-            <input
-              type="date"
-              value={form.publish_date}
-              onChange={e=>setForm({...form,publish_date:e.target.value})}
+            <label className="text-sm font-medium">Content</label>
+            <textarea
+              rows="6"
+              value={form.content}
+              onChange={e => setForm({ ...form, content: e.target.value })}
               className="w-full mt-1 border rounded-lg px-3 py-2"
             />
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              className="px-4 py-2 text-sm bg-gray-200 rounded-lg w-full sm:w-auto"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg w-full sm:w-auto"
+            >
+              {saving ? "Saving..." : "Publish"}
+            </button>
 
           </div>
 
-        </div>
-
-        <div>
-
-          <label className="text-sm font-medium">
-            Excerpt
-          </label>
-
-          <input
-            value={form.excerpt}
-            onChange={e=>setForm({...form,excerpt:e.target.value})}
-            className="w-full mt-1 border rounded-lg px-3 py-2"
-          />
-
-        </div>
-
-        <div>
-
-          <label className="text-sm font-medium">
-            Content
-          </label>
-
-          <textarea
-            rows="8"
-            value={form.content}
-            onChange={e=>setForm({...form,content:e.target.value})}
-            className="w-full mt-1 border rounded-lg px-3 py-2"
-          />
-
-        </div>
-
-        <div className="flex justify-end gap-3 pt-4">
-
-          <button
-            type="button"
-            onClick={()=>setModal(null)}
-            className="px-4 py-2 text-sm bg-gray-200 rounded-lg"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            {saving?"Saving...":"Publish"}
-          </button>
-
-        </div>
-
-      </form>
+        </form>
 
       </Modal>
-
     )}
 
   </div>
-
-  )
+)
 
 }

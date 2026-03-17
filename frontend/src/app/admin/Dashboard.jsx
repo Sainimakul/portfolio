@@ -66,12 +66,130 @@ const statCards=[
 
 if(loading){
 
-return(
+return (
+  <div className="space-y-6 md:space-y-8 text-black">
 
-<div className="flex flex-col items-center justify-center h-64 gap-4 text-black">
-<div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-<p className="text-gray-500">Loading dashboard...</p>
-</div>
+    {/* Header */}
+    <div>
+      <h2 className="text-xl md:text-2xl font-bold">Dashboard</h2>
+      <p className="text-gray-500 text-sm md:text-base">
+        Welcome back to your portfolio admin panel
+      </p>
+    </div>
+
+    {/* 🔥 Stats */}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+
+      {statCards.map(stat => (
+        <div
+          key={stat.title}
+          className="bg-white rounded-xl shadow p-4 md:p-5 flex items-center gap-3 md:gap-4"
+        >
+          <div className="text-xl md:text-2xl">
+            {stat.icon}
+          </div>
+
+          <div>
+            <h3 className="text-lg md:text-xl font-bold">
+              {stat.value}
+            </h3>
+            <p className="text-xs md:text-sm text-gray-500">
+              {stat.title}
+            </p>
+          </div>
+        </div>
+      ))}
+
+    </div>
+
+    {/* 🔥 Bottom Section */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+
+      {/* Messages */}
+      <div className="bg-white rounded-xl shadow p-4 md:p-6">
+
+        <h3 className="font-semibold mb-4 text-sm md:text-base">
+          Recent Messages
+        </h3>
+
+        {recentMessages.length === 0 ? (
+          <p className="text-gray-400 text-sm">
+            No messages yet
+          </p>
+        ) : (
+          <div className="space-y-4">
+
+            {recentMessages.map(msg => (
+              <div key={msg.id} className="border-b pb-3">
+
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-sm gap-1">
+
+                  <strong className="truncate">
+                    {msg.name}
+                  </strong>
+
+                  <span className="text-gray-400 text-xs">
+                    {new Date(msg.created_at).toLocaleDateString()}
+                  </span>
+
+                </div>
+
+                <p className="text-gray-500 text-sm mt-1 line-clamp-2">
+                  {msg.subject || msg.message?.substring(0, 80)}
+                </p>
+
+              </div>
+            ))}
+
+          </div>
+        )}
+
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl shadow p-4 md:p-6">
+
+        <h3 className="font-semibold mb-4 text-sm md:text-base">
+          Quick Actions
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+
+          <button
+            className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm"
+            onClick={() => window.location.href = "/admin?page=projects"}
+          >
+            ➕ Add Project
+          </button>
+
+          <button
+            className="flex items-center gap-2 p-3 bg-green-50 rounded-lg hover:bg-green-100 text-sm"
+            onClick={() => window.location.href = "/admin?page=blogs"}
+          >
+            📝 Write Blog
+          </button>
+
+          <button
+            className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 text-sm"
+            onClick={() => window.location.href = "/admin?page=skills"}
+          >
+            ⚡ Add Skill
+          </button>
+
+          <button
+            className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 text-sm"
+            onClick={() => window.open("/", "_blank")}
+          >
+            👁️ View Site
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
 )
 
 }

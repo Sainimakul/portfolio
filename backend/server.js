@@ -8,7 +8,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 
 app.use(cors(
-   { origin: 'https://web.portfolio.makulsaini.online'}
+   { origin: process.env.ENV = 'local'? '*' : 'https://web.portfolio.makulsaini.online'}
 ));
 app.use(express.json());
 
