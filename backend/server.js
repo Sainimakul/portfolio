@@ -8,7 +8,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 
 app.use(cors(
-   { origin: 'https://portfolio-swart-ten-ymo43e1xyc.vercel.app'}
+   { origin: 'https://portfolioweb.makulsaini.online'}
 ));
 app.use(express.json());
 
