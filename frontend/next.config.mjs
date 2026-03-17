@@ -7,7 +7,7 @@ const nextConfig = {
         has: [
           {
             type: 'host',
-            value: 'portfolioAdmin.makulsaini.online',
+            value: 'portfolioadmin.makulsaini.online',
           },
         ],
         destination: '/admin',
