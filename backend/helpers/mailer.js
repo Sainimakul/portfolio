@@ -1,30 +1,20 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const dns = require("dns");
-
-dns.setDefaultResultOrder("ipv4first");
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  family: 4,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-  rejectUnauthorized: false,
-}
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.sendMail = async ({ to, subject, html }) => {
-  await transporter.verify();
-  console.log("SMTP ready");
-  await transporter.sendMail({
-    from: `"Portfolio Admin" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  });
+  try {
+    const response = await resend.emails.send({
+      from: "Makul Saini <noreply@update.makulsaini.online>",
+      to,
+      subject,
+      html,
+    });
+
+    console.log("Mail sent:", response);
+    return response;
+  } catch (err) {
+    console.error("Mail error:", err);
+    throw err;
+  }
 };
