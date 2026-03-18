@@ -17,6 +17,7 @@ https://your-portfolio-url.com
 
 * Dynamic portfolio website
 * Admin dashboard for managing portfolio content
+* Admin can reply to user messages directly via email from the dashboard
 * Add / Edit / Delete projects
 * Manage tech stack for each project
 * Experience section with multiple bullet points
