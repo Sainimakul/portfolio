@@ -232,46 +232,71 @@ return (
             </table>
           </div>
 
-          {/* 🔥 Mobile Cards */}
-          <div className="md:hidden space-y-4 p-4">
-            {items.map(b => (
-              <div key={b.id} className="border rounded-lg p-4 space-y-2 shadow-sm">
+          {/* 🔥 PREMIUM MOBILE CARDS */}
+<div className="md:hidden space-y-5 p-4">
 
-                <div className="font-semibold">{b.title}</div>
+  {items.map(b => (
+    <div
+      key={b.id}
+      className="bg-white rounded-2xl shadow-md hover:shadow-lg transition p-4 space-y-3"
+    >
 
-                <div className="text-xs text-gray-500">
-                  {formatDate(b.publish_date)} • {b.read_time || "-"}
-                </div>
+      {/* Top Meta */}
+      <div className="flex justify-between items-center text-xs text-gray-400">
+        <span>{formatDate(b.publish_date)}</span>
+        <span>{b.read_time || "-"}</span>
+      </div>
 
-                <div className="text-sm text-gray-600">
-                  {truncate(b.excerpt, 80)}
-                </div>
+      {/* Title */}
+      <h3 className="font-semibold text-base leading-snug line-clamp-2">
+        {b.title}
+      </h3>
 
-                <div>
-                  <span className="px-2 py-1 text-xs bg-gray-100 rounded">
-                    {b.category || "General"}
-                  </span>
-                </div>
+      {/* Category */}
+      <div>
+        <span className="inline-block text-[10px] px-2 py-1 bg-blue-50 text-blue-600 rounded-full font-medium">
+          {b.category || "General"}
+        </span>
+      </div>
 
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => openEdit(b)}
-                    className="flex-1 px-3 py-2 text-xs bg-gray-200 rounded"
-                  >
-                    Edit
-                  </button>
+      {/* Excerpt */}
+      <p className="text-sm text-gray-600 leading-relaxed">
+        {truncate(b.excerpt, 100)}
+      </p>
 
-                  <button
-                    onClick={() => handleDelete(b.id)}
-                    className="flex-1 px-3 py-2 text-xs bg-red-500 text-white rounded"
-                  >
-                    Delete
-                  </button>
-                </div>
+      {/* Divider */}
+      <div className="border-t pt-3 flex justify-between items-center">
 
-              </div>
-            ))}
-          </div>
+        {/* Actions */}
+        <div className="flex gap-2">
+
+          <button
+            onClick={() => openEdit(b)}
+            className="text-xs px-3 py-1 bg-gray-100 rounded-full hover:bg-gray-200"
+          >
+            Edit
+          </button>
+
+          <button
+            onClick={() => handleDelete(b.id)}
+            className="text-xs px-3 py-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+          >
+            Delete
+          </button>
+
+        </div>
+
+        {/* Read Indicator */}
+        <span className="text-xs text-gray-400">
+          →
+        </span>
+
+      </div>
+
+    </div>
+  ))}
+
+</div>
         </>
       )}
     </div>

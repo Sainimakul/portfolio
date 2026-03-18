@@ -162,9 +162,8 @@ export default function SocialLinks() {
                     </div>
 
                 ) : (
-
-                    <div className="overflow-x-auto">
-
+<>
+<div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
 
                             <thead className="bg-gray-50 text-left">
@@ -225,7 +224,70 @@ export default function SocialLinks() {
                         </table>
 
                     </div>
+                    {/* 📱 MOBILE VIEW */}
+{/* 📱 MOBILE VIEW */}
+<div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
 
+  {items.map(link => (
+    <div
+      key={link.id}
+      className="bg-white rounded-2xl shadow-md hover:shadow-lg transition p-4 space-y-4"
+    >
+
+      {/* Top */}
+      <div className="flex items-center gap-3">
+
+        {/* Icon */}
+        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
+          {link.platform?.charAt(0)?.toUpperCase() || "?"}
+        </div>
+
+        {/* Platform Info */}
+        <div className="flex-1">
+          <h3 className="font-semibold text-sm">
+            {link.platform}
+          </h3>
+          <p className="text-xs text-gray-400">
+            Order #{link.order_index}
+          </p>
+        </div>
+
+      </div>
+
+      {/* URL */}
+      <a
+        href={link.url}
+        target="_blank"
+        className="text-sm text-blue-600 break-all hover:underline"
+      >
+        {link.url}
+      </a>
+
+      {/* Actions */}
+      <div className="grid grid-cols-2 gap-2 pt-2">
+
+        <button
+          onClick={() => openEdit(link)}
+          className="text-xs bg-gray-100 py-2 rounded-full"
+        >
+          Edit
+        </button>
+
+
+        <button
+          onClick={() => handleDelete(link.id)}
+          className="text-xs bg-red-500 text-white py-2 rounded-full"
+        >
+          Delete
+        </button>
+
+      </div>
+
+    </div>
+  ))}
+
+</div>
+</>
                 )}
 
             </div>

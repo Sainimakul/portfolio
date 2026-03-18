@@ -161,8 +161,8 @@ export default function Testimonials() {
           </div>
 
         ) : (
-
-          <div className="overflow-x-auto">
+<>
+          <div className="hidden md:block overflow-x-auto">
 
             <table className="w-full text-sm">
 
@@ -246,7 +246,57 @@ export default function Testimonials() {
             </table>
 
           </div>
+          {/* 📱 PREMIUM MOBILE CARDS */}
+<div className="md:hidden space-y-4 p-4">
 
+  {items.map(t => (
+    <div
+      key={t.id}
+      className="bg-white rounded-2xl shadow-md hover:shadow-lg transition p-4 space-y-3"
+    >
+
+      {/* Top Section */}
+      <div className="flex items-center gap-3">
+
+        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+          {t.avatar_initials || "?"}
+        </div>
+
+        <div className="flex-1">
+          <h3 className="font-semibold text-sm">
+            {t.name}
+          </h3>
+
+          <p className="text-xs text-gray-500">
+            {t.role || "—"} {t.company ? `• ${t.company}` : ""}
+          </p>
+        </div>
+
+        {/* Delete */}
+        <button
+          onClick={() => handleDelete(t.id)}
+          className="text-xs px-2 py-1 bg-red-500 text-white rounded-full"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      {/* Rating */}
+      <div className="text-yellow-500 text-sm">
+        {stars(t.rating)}
+      </div>
+
+      {/* Review */}
+      <p className="text-sm text-gray-600 leading-relaxed">
+        {truncate(t.review, 120)}
+      </p>
+
+    </div>
+  ))}
+
+</div>
+</>
         )}
 
       </div>

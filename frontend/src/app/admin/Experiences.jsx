@@ -34,36 +34,21 @@ export default function Experiences() {
 
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load() }, []);
 
   async function load() {
-
     try {
-
       setLoading(true);
-
       const res = await getExperiences();
-
-      const data = res?.data;
-
-      setItems(Array.isArray(data) ? data : []);
-
+      setItems(Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
-
-      toast.error(err.message || "Failed to load experiences");
-
+      toast.error(err.message || "Failed to load");
     } finally {
-
       setLoading(false);
-
     }
-
   }
 
   function openAdd() {
-
     setForm({
       role: "",
       company: "",
@@ -73,42 +58,33 @@ export default function Experiences() {
       is_current: false,
       points: []
     });
-
     setModal("add");
-
   }
 
   function openEdit(item) {
-
     const parsedPoints =
       typeof item.points === "string"
         ? item.points.split(",").map(v => v.trim())
-        : Array.isArray(item.points)
-        ? item.points
-        : [];
+        : item.points || [];
 
     setForm({
       role: item.role || "",
       company: item.company || "",
       description: item.description || "",
-      start_date: item.start_date ? item.start_date.substring(0,10) : "",
-      end_date: item.end_date ? item.end_date.substring(0,10) : "",
+      start_date: item.start_date?.substring(0, 10) || "",
+      end_date: item.end_date?.substring(0, 10) || "",
       is_current: item.is_current === true || item.is_current === "true",
       points: parsedPoints
     });
 
     setModal(item);
-
   }
 
   async function handleSave(e) {
-
     e.preventDefault();
-
     setSaving(true);
 
     try {
-
       const payload = {
         ...form,
         end_date: form.is_current ? null : form.end_date,
@@ -116,231 +92,174 @@ export default function Experiences() {
       };
 
       if (modal === "add") {
-
         await addExperience(payload);
-
-        toast.success("Experience created");
-
+        toast.success("Created");
       } else {
-
-        await updateExperience(modal?.id, payload);
-
-        toast.success("Experience updated");
-
+        await updateExperience(modal.id, payload);
+        toast.success("Updated");
       }
 
       setModal(null);
-
       load();
-
     } catch (err) {
-
-      toast.error(err.message || "Failed to save");
-
+      toast.error(err.message);
     } finally {
-
       setSaving(false);
-
     }
-
   }
 
   async function handleDelete(id) {
-
     if (!confirm("Delete this experience?")) return;
-
-    try {
-
-      await deleteExperience(id);
-
-      toast.success("Experience deleted");
-
-      load();
-
-    } catch (err) {
-
-      toast.error(err.message);
-
-    }
-
+    await deleteExperience(id);
+    toast.success("Deleted");
+    load();
   }
 
-return (
-  <div className="space-y-6 text-black">
+  return (
+    <div className="space-y-6 text-black p-4 md:p-6">
 
-    {/* Header */}
-    <div>
-      <h2 className="text-xl md:text-2xl font-bold">Experiences</h2>
-      <p className="text-gray-500 text-sm md:text-base">
-        Manage your work experience
-      </p>
-    </div>
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold">Experiences</h2>
+        <p className="text-gray-500 text-sm">
+          Manage your work experience
+        </p>
+      </div>
 
-    <div className="bg-white rounded-xl shadow">
+      <div className="bg-white rounded-xl shadow">
 
-      {/* Top Bar */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-5 border-b">
+        {/* Top */}
+        <div className="flex justify-between items-center p-5 border-b">
+          <h3 className="font-semibold">
+            All Experiences ({items.length})
+          </h3>
 
-        <h3 className="font-semibold text-sm md:text-base">
-          All Experiences ({items.length})
-        </h3>
+          <button
+            onClick={openAdd}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg"
+          >
+            + Add Experience
+          </button>
+        </div>
 
-        <button
-          onClick={openAdd}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto"
-        >
-          + Add Experience
-        </button>
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            💼 No experiences
+          </div>
+        ) : (
+          <>
+            {/* 💻 Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3">Role</th>
+                    <th className="p-3">Company</th>
+                    <th className="p-3">Duration</th>
+                    <th className="p-3">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {items.map(exp => (
+                    <tr key={exp.id} className="border-t">
+                      <td className="p-3 font-medium">{exp.role}</td>
+                      <td className="p-3">{exp.company}</td>
+                      <td className="p-3 text-gray-500">
+                        {exp.start_date?.substring(0,10)} - {exp.is_current ? "Present" : exp.end_date?.substring(0,10)}
+                      </td>
+                      <td className="p-3 flex gap-2">
+                        <button onClick={() => openEdit(exp)} className="px-2 py-1 text-xs bg-gray-200 rounded">Edit</button>
+                        <button onClick={() => handleDelete(exp.id)} className="px-2 py-1 text-xs bg-red-500 text-white rounded">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 📱 MOBILE TIMELINE */}
+            <div className="md:hidden relative pl-6 pr-4 py-4 space-y-6">
+
+              {/* vertical line */}
+              <div className="absolute left-3 top-0 bottom-0 w-[2px] bg-gray-200"></div>
+
+              {items.map(exp => {
+                const points =
+                  typeof exp.points === "string"
+                    ? exp.points.split(",")
+                    : exp.points || [];
+
+                return (
+                  <div key={exp.id} className="relative">
+
+                    {/* dot */}
+                    <div className="absolute -left-[9px] top-2 w-4 h-4 bg-blue-600 rounded-full border-2 border-white"></div>
+
+                    <div className="bg-white rounded-xl shadow-md p-4 space-y-3">
+
+                      {/* Role */}
+                      <h3 className="font-semibold text-sm">
+                        {exp.role}
+                      </h3>
+
+                      {/* Company */}
+                      <p className="text-xs text-gray-500">
+                        {exp.company}
+                      </p>
+
+                      {/* Duration */}
+                      <p className="text-xs text-gray-400">
+                        {exp.start_date?.substring(0,10)} → {exp.is_current ? "Present" : exp.end_date?.substring(0,10)}
+                      </p>
+
+                      {/* Description */}
+                      <p className="text-sm text-gray-600">
+                        {truncate(exp.description, 90)}
+                      </p>
+
+                      {/* Points */}
+                      <ul className="text-xs text-gray-500 list-disc pl-4 space-y-1">
+                        {points.slice(0, 3).map((p, i) => (
+                          <li key={i}>{p}</li>
+                        ))}
+                      </ul>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={() => openEdit(exp)}
+                          className="flex-1 text-xs bg-gray-100 py-2 rounded-full"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(exp.id)}
+                          className="flex-1 text-xs bg-red-500 text-white py-2 rounded-full"
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                    </div>
+
+                  </div>
+                );
+              })}
+
+            </div>
+          </>
+        )}
 
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <div className="text-4xl mb-3">💼</div>
-          <p>No experiences yet</p>
-        </div>
-      ) : (
-        <>
-          {/* 🔥 Desktop Table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-
-              <thead className="bg-gray-50 text-left">
-                <tr>
-                  <th className="p-3">Role</th>
-                  <th className="p-3">Company</th>
-                  <th className="p-3">Description</th>
-                  <th className="p-3">Duration</th>
-                  <th className="p-3">Points</th>
-                  <th className="p-3">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {items.map(exp => {
-
-                  const points =
-                    typeof exp.points === "string"
-                      ? exp.points.split(",")
-                      : Array.isArray(exp.points)
-                      ? exp.points
-                      : [];
-
-                  return (
-                    <tr key={exp.id} className="border-t">
-
-                      <td className="p-3 font-medium">{exp.role}</td>
-
-                      <td className="p-3 text-gray-500">{exp.company}</td>
-
-                      <td className="p-3 text-gray-500">
-                        {truncate(exp.description, 60)}
-                      </td>
-
-                      <td className="p-3">
-                        {exp.start_date?.substring(0,10)} -{" "}
-                        {exp.is_current ? "Present" : exp.end_date?.substring(0,10)}
-                      </td>
-
-                      <td className="p-3 text-gray-500">
-                        {points.slice(0,2).join(", ")}
-                      </td>
-
-                      <td className="p-3">
-                        <div className="flex gap-2">
-
-                          <button
-                            onClick={() => openEdit(exp)}
-                            className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            onClick={() => handleDelete(exp.id)}
-                            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                          >
-                            Delete
-                          </button>
-
-                        </div>
-                      </td>
-
-                    </tr>
-                  );
-                })}
-              </tbody>
-
-            </table>
-          </div>
-
-          {/* 🔥 Mobile Cards */}
-          <div className="md:hidden space-y-4 p-4">
-
-            {items.map(exp => {
-
-              const points =
-                typeof exp.points === "string"
-                  ? exp.points.split(",")
-                  : Array.isArray(exp.points)
-                  ? exp.points
-                  : [];
-
-              return (
-                <div key={exp.id} className="border rounded-lg p-4 space-y-2 shadow-sm">
-
-                  <div className="font-semibold">{exp.role}</div>
-
-                  <div className="text-sm text-gray-500">
-                    {exp.company}
-                  </div>
-
-                  <div className="text-xs text-gray-400">
-                    {exp.start_date?.substring(0,10)} •{" "}
-                    {exp.is_current ? "Present" : exp.end_date?.substring(0,10)}
-                  </div>
-
-                  <div className="text-sm text-gray-600">
-                    {truncate(exp.description, 80)}
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    {points.slice(0,2).join(", ")}
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-
-                    <button
-                      onClick={() => openEdit(exp)}
-                      className="flex-1 px-3 py-2 text-xs bg-gray-200 rounded"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(exp.id)}
-                      className="flex-1 px-3 py-2 text-xs bg-red-500 text-white rounded"
-                    >
-                      Delete
-                    </button>
-
-                  </div>
-
-                </div>
-              );
-            })}
-
-          </div>
-        </>
-      )}
-
-    </div>
-
-    {/* 🔥 Modal */}
+      {/* Modal stays same */}
+          {/* 🔥 Modal */}
     {modal && (
       <Modal
         title={modal === "add" ? "Add Experience" : "Edit Experience"}
@@ -463,7 +382,6 @@ return (
       </Modal>
     )}
 
-  </div>
-)
-
+    </div>
+  );
 }
