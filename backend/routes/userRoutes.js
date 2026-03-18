@@ -11,4 +11,7 @@ router.get("/social-links", controller.getSocialLinks);
 router.post("/contact", controller.contactMessage);
 router.get("/experiences", controller.getExperiences);
 
+router.post("/track-event", controller.trackEvent);
+
+
 module.exports = router;

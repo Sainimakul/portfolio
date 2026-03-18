@@ -195,3 +195,38 @@ ORDER BY e.created_at DESC;
   }
 
 };
+
+/* =============================
+   TRACK EVENT (ANALYTICS)
+============================= */
+exports.trackEvent = async (req, res) => {
+  try {
+    const { event_type, page, metadata } = req.body;
+
+    const ip =
+      req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+
+    const userAgent = req.headers["user-agent"];
+    const device = /mobile/i.test(userAgent) ? "mobile" : "desktop";
+    const enrichedMetadata = {
+      ...metadata,
+      ip,
+      userAgent,
+      device
+    };
+
+    await db.query(
+      `INSERT INTO event_logs (event_type, page, metadata)
+       VALUES ($1, $2, $3)`,
+      [
+        event_type,
+        page || null,
+        enrichedMetadata || null,
+      ]
+    );
+
+    success(res, null, "Event tracked");
+  } catch (err) {
+    error(res, err.message);
+  }
+};

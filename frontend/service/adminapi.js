@@ -203,7 +203,12 @@ export async function deleteMessage(id) {
   });
 }
 
-
+export async function sendReply(data) {
+  return apiRequest('/admin/messages/reply', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
 /* =============================
    SOCIAL LINKS
 ============================= */

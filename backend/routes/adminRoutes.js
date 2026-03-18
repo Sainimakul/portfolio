@@ -72,6 +72,8 @@ router.get("/messages", adminAuth, controller.getMessages);
 
 router.delete("/messages/:id", adminAuth, controller.deleteMessage);
 
+router.post("/messages/reply", controller.sendReply);
+
 /* =============================
    SOCIAL LINKS
 ============================= */

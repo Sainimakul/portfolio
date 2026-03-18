@@ -57,6 +57,18 @@ export const sendContactMessage = async (data) => {
   return handleResponse(res);
 };
 
+export const trackEvent = async (event) => {
+  const res = await fetch(`${API_BASE}/track-event`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(event)
+  });
+
+  return handleResponse(res);
+};
+
 
 export const getPortfolioData = async () => {
 

@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect, useCallback } from "react"
-import { getMessages, deleteMessage } from "../../../service/adminapi"
+import { getMessages, deleteMessage, sendReply } from "../../../service/adminapi"
 import { toast } from "./component/Toast"
 import { Modal } from "./component/Modal"
 import { useEditor, EditorContent } from "@tiptap/react"
@@ -232,10 +232,16 @@ function RichEditor({ value, onChange }) {
 /* ─────────────────────── MessageRow ─────────────────────── */
 function MessageRow({ m, onClick }) {
   const color = avatarColor(m.name)
+
   return (
     <div
       onClick={onClick}
-      className="flex items-start gap-3 px-4 py-3.5 hover:bg-blue-50/60 cursor-pointer transition-colors group border-b border-slate-100 last:border-0"
+      className={`
+        flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-all border-b border-slate-100
+        ${m.replied === "false"
+          ? "bg-blue-50 border-l-4 border-blue-500 hover:bg-blue-100"
+          : "hover:bg-slate-50"}
+      `}
     >
       {/* Avatar */}
       <div className={`flex-shrink-0 w-9 h-9 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold`}>
@@ -244,21 +250,53 @@ function MessageRow({ m, onClick }) {
 
       {/* Content */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2 mb-0.5">
-          <span className="font-semibold text-slate-800 text-sm truncate">{m.name}</span>
-          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">{formatDate(m.created_at)}</span>
-        </div>
-        {m.subject && (
-          <div className="text-sm text-slate-600 truncate mb-0.5">{m.subject}</div>
-        )}
-        <div className="text-xs text-slate-400 truncate">{m.message?.substring(0, 80)}</div>
-      </div>
+        
+        {/* Name + Status */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-800 text-sm">
+              {m.name}
+            </span>
 
-      {/* Arrow */}
-      <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
-        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+            {m.replied === "false" ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
+                Pending
+              </span>
+            ) : (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium">
+                Replied
+              </span>
+            )}
+          </div>
+
+          <span className="text-xs text-slate-400">
+            {formatDate(m.created_at)}
+          </span>
+        </div>
+
+        {/* Email */}
+        <div className="text-xs text-slate-500 truncate">
+          📧 {m.email}
+        </div>
+
+        {/* Phone (if exists) */}
+        {m.phone && (
+          <div className="text-xs text-slate-500">
+            📱 {m.phone}
+          </div>
+        )}
+
+        {/* Subject */}
+        {m.subject && (
+          <div className="text-sm text-slate-700 font-medium truncate mt-1">
+            {m.subject}
+          </div>
+        )}
+
+        {/* Message Preview */}
+        <div className="text-xs text-slate-400 truncate mt-0.5">
+          {m.message?.substring(0, 60)}...
+        </div>
       </div>
     </div>
   )
@@ -300,7 +338,7 @@ export default function Messages() {
     if (!reply || reply === "<p></p>") return toast.error("Write something first")
     setSending(true)
     try {
-      // await sendReply({ to: selected.email, subject: `Re: ${selected.subject || "Your message"}`, message: reply })
+      await sendReply({ id: selected.id,email: selected.email, subject: `Re: ${selected.subject || "Your message"}`, message: reply })
       toast.success("Reply sent!")
       setSelected(null)
       setReply("")
@@ -408,95 +446,128 @@ export default function Messages() {
         )}
       </div>
 
-      {/* ── Reply Modal ── */}
-      {selected && (
-        <Modal
-          title={
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                {getInitials(selected.name)}
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-slate-900 text-sm leading-tight">{selected.name}</div>
-                <div className="text-xs text-slate-500 truncate">{selected.email}</div>
-              </div>
-              {selected.replied && (
-                <span className="ml-auto flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-full border border-emerald-200">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  Replied
-                </span>
-              )}
-            </div>
-          }
-          onClose={() => setSelected(null)}
-        >
-          <div className="space-y-4">
+     {/* ── Reply Modal ── */}
+{selected && (
+  <Modal
+    title={
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+          {getInitials(selected.name)}
+        </div>
+        <div className="min-w-0">
+          <div className="font-semibold text-slate-900 text-sm leading-tight">{selected.name}</div>
+          <div className="text-xs text-slate-500 truncate">{selected.email}</div>
+        </div>
 
-            {/* Original Message */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm space-y-2">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                <span>{selected.email}</span>
-                <span>·</span>
-                <span>{formatDate(selected.created_at)}</span>
-              </div>
-              {selected.subject && (
-                <div className="font-semibold text-slate-700">{selected.subject}</div>
-              )}
-              <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{selected.message}</p>
-            </div>
+        {selected.replied === "true" && (
+          <span className="ml-auto flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-full border border-emerald-200">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Replied
+          </span>
+        )}
+      </div>
+    }
+    onClose={() => setSelected(null)}
+  >
+    <div className="space-y-4">
 
-            {/* Reply Subject */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Subject</label>
-              <input
-                value={`Re: ${selected.subject || "Your message"}`}
-                readOnly
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
-              />
-            </div>
+      {/* Original Message */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm space-y-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>{selected.email}</span>
+          <span>·</span>
+          <span>{formatDate(selected.created_at)}</span>
+        </div>
 
-            {/* Rich Editor */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Reply</label>
-              <RichEditor value={reply} onChange={setReply} />
-            </div>
+        {selected.subject && (
+          <div className="font-semibold text-slate-700">{selected.subject}</div>
+        )}
 
-            {/* Actions */}
-            <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-1">
-              <button
-                onClick={() => handleDelete(selected.id)}
-                className="flex items-center justify-center gap-2 px-4 py-2 text-sm bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0h10" />
-                </svg>
-                Delete
-              </button>
+        <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
+          {selected.message}
+        </p>
+      </div>
 
-              <button
-                onClick={handleSendReply}
-                disabled={sending}
-                className="flex items-center justify-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
-              >
-                {sending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Sending…
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                    Send Reply
-                  </>
-                )}
-              </button>
-            </div>
+      {/* Subject */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+          Subject
+        </label>
+        <input
+          value={`Re: ${selected.subject || "Your message"}`}
+          readOnly
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
+        />
+      </div>
 
-          </div>
-        </Modal>
+      {/* 🔥 Conditional Reply Section */}
+      {selected.replied === "true" ? (
+        // ✅ SHOW REPLIED CONTENT
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            Your Reply
+          </label>
+
+          <div
+            className="prose prose-sm max-w-none border border-slate-200 rounded-xl p-3 bg-slate-50 text-slate-700"
+            dangerouslySetInnerHTML={{
+              __html: selected.reply || "<p>No reply found</p>",
+            }}
+          />
+        </div>
+      ) : (
+        // ✅ SHOW EDITOR
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            Reply
+          </label>
+          <RichEditor value={reply} onChange={setReply} />
+        </div>
       )}
+
+      {/* Actions */}
+      <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-1">
+
+        {/* Delete Button */}
+        <button
+          onClick={() => handleDelete(selected.id)}
+          className="flex items-center justify-center gap-2 px-4 py-2 text-sm bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0h10" />
+          </svg>
+          Delete
+        </button>
+
+        {/* 🔥 Send Button ONLY if not replied */}
+        {selected.replied !== "true" && (
+          <button
+            onClick={handleSendReply}
+            disabled={sending}
+            className="flex items-center justify-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            {sending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Sending…
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Send Reply
+              </>
+            )}
+          </button>
+        )}
+
+      </div>
+    </div>
+  </Modal>
+)}
     </div>
   )
 }

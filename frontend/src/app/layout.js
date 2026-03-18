@@ -1,5 +1,7 @@
 import { PortfolioProvider } from "../../context/PortfolioContext";
 import "./globals.css";
+import TrackerProvider from "../../context/TrackerProvider";
+
 export const metadata = {
   title: "Makul Portfolio",
   description: "Full Stack Developer Portfolio",
@@ -13,6 +15,8 @@ export default function RootLayout({ children }) {
       <body>
 
         <PortfolioProvider>
+                    <TrackerProvider />
+
           {children}
         </PortfolioProvider>
 

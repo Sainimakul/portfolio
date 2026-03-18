@@ -2,6 +2,7 @@ const db = require("../helpers/db");
 const bcrypt = require("bcryptjs");
 const { success, error } = require("../helpers/response");
 const { generateToken } = require("../helpers/auth");
+const { sendMail } = require("../helpers/mailer");
 
 
 /* =============================
@@ -492,6 +493,40 @@ exports.deleteMessage = async (req, res) => {
   }
 };
 
+exports.sendReply = async (req, res) => {
+  try {
+    const { id, email, subject,  message } = req.body;
+
+    // 1. Get message details
+    const result = await db.query(
+      "SELECT * FROM messages WHERE id=$1",
+      [id]
+    );
+
+    if (!result.rows.length) {
+      return error(res, "Message not found", 404);
+    }
+
+
+    // 2. Send email
+    await sendMail({
+      to: email,
+      subject: subject,
+      html: message, // HTML from tiptap
+    });
+
+    // 3. Mark as replied
+    await db.query(
+      "UPDATE messages SET replied='true', reply = $1 WHERE id=$2",
+      [message, id]
+    );
+
+    success(res, null, "Reply sent successfully");
+  } catch (err) {
+    console.log(err);
+    error(res, err.message);
+  }
+};
 
 /* =============================
    Social Links
