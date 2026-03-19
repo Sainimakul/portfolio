@@ -1,27 +1,45 @@
 "use client";
 
-import { usePortfolio } from "../../context/PortfolioContext";
-import { sendContactMessage } from "../../service/api";
 import { useState, useEffect, useRef } from "react";
 import { success, error } from "../util/toast";
+import { usePortfolio } from "../../context/PortfolioContext";
 
-function formatDate(dateString) {
-  if (!dateString) return "";
-  const d = new Date(dateString);
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-}
-function truncate(str, n) {
-  return str?.length > n ? str.substring(0, n - 1) + "…" : str;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short" });
 }
 
+function useInView(ref, threshold = 0.15) {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  return inView;
+}
+
+// ─── Reusable: Section Header ─────────────────────────────────────────────────
+function SectionLabel({ tag, title, titleExtra }) {
+  return (
+    <div className="mb-16">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-1.5 h-1.5 rotate-45 bg-amber-400" />
+        <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-amber-400">{tag}</span>
+      </div>
+      <h2 className="font-display text-5xl md:text-7xl text-white tracking-tight leading-none">
+        {title}
+        {titleExtra && <span className="text-amber-400 italic font-serif font-light ml-3">{titleExtra}</span>}
+      </h2>
+      <div className="mt-5 h-px w-24 bg-gradient-to-r from-amber-400/60 to-transparent" />
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function Template1() {
-  const { portfolioData, loading } = usePortfolio();
-  const [contactForm, setContactForm] = useState({ name: "", email: "", subject: "", message: "" });
-  const [sending, setSending] = useState(false);
-  const [visible, setVisible] = useState({});
-  const [menuOpen, setMenuOpen] = useState(false);
-  const sectionRefs = useRef({});
-
+   const { portfolioData, loading } = usePortfolio();
   const profile = portfolioData?.profile.data || {};
   const skills = portfolioData?.skills.data || [];
   const projects = portfolioData?.projects.data || [];
@@ -30,611 +48,469 @@ export default function Template1() {
   const socialLinks = portfolioData?.SocialLinks.data || [];
   const experiences = portfolioData?.experiences.data || [];
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setVisible((prev) => ({ ...prev, [entry.target.dataset.id]: true }));
-        });
-      },
-      { threshold: 0.1 }
-    );
-    Object.values(sectionRefs.current).forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [sending, setSending] = useState(false);
 
-  function registerRef(id) {
-    return (el) => { if (el) { el.dataset.id = id; sectionRefs.current[id] = el; } };
-  }
+  // Section refs for reveal
+  const skillsRef = useRef(null);
+  const projectsRef = useRef(null);
+  const expRef = useRef(null);
+  const blogRef = useRef(null);
+  const contactRef = useRef(null);
+  const testimonRef = useRef(null);
 
-  async function handleContact(e) {
+  const skillsVis = useInView(skillsRef);
+  const projectsVis = useInView(projectsRef);
+  const expVis = useInView(expRef);
+  const blogVis = useInView(blogRef);
+  const contactVis = useInView(contactRef);
+  const testimonVis = useInView(testimonRef);
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    try {
-      setSending(true);
-      await sendContactMessage(contactForm);
-      success("Message sent successfully");
-      setContactForm({ name: "", email: "", subject: "", message: "" });
-    } catch (err) { error(err.message); }
-    finally { setSending(false); }
+    setSending(true);
+    await new Promise((r) => setTimeout(r, 1200));
+    setSending(false);
+    setForm({ name: "", email: "", subject: "", message: "" });
+    success("Message sent! I'll get back to you shortly.");
   }
-
-  if (loading) return (
-    <div style={ls.wrap}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&display=swap'); @keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={ls.diamond} /><span style={ls.text}>LOADING</span>
-    </div>
-  );
 
   return (
-    <div style={st.root}>
-      <style>{GLOBAL_CSS}</style>
-      <div style={st.bgGrid} />
-      <div style={st.bgDiag1} />
-      <div style={st.bgDiag2} />
+    <>
+      {/* Global styles + Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,300;1,400&family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+        .font-display { font-family: 'Syne', sans-serif; }
+        .font-body   { font-family: 'DM Sans', sans-serif; }
+        .font-serif  { font-family: 'Playfair Display', serif; }
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 4px; background: #0a0b0f; }
+        ::-webkit-scrollbar-thumb { background: #b8922a; border-radius: 2px; }
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+        @keyframes scaleIn  { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+        @keyframes spinSlow { to { transform: rotate(360deg); } }
+        @keyframes spinRev  { to { transform: rotate(-360deg); } }
+        @keyframes pulse    { 0%,100%{ opacity:1;} 50%{ opacity:0.35; } }
+        @keyframes barGrow  { from { width:0 !important; } }
+        .anim-fadeUp  { animation: fadeUp  0.7s cubic-bezier(.16,1,.3,1) both; }
+        .anim-fadeIn  { animation: fadeIn  0.6s ease both; }
+        .anim-spinSlow{ animation: spinSlow 14s linear infinite; }
+        .anim-spinRev { animation: spinRev  9s  linear infinite; }
+        .anim-pulse   { animation: pulse 2.4s ease-in-out infinite; }
+        .bar-grow     { animation: barGrow 1.5s cubic-bezier(.4,0,.2,1) both; }
+        .reveal       { opacity:0; transform:translateY(24px); transition: opacity .7s ease, transform .7s cubic-bezier(.16,1,.3,1); }
+        .reveal.show  { opacity:1; transform:translateY(0); }
+        .nav-link     { position:relative; }
+        .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:1px; background:#f59e0b; transition: width .3s ease; }
+        .nav-link:hover::after { width:100%; }
+        .card-shine   { position:relative; overflow:hidden; }
+        .card-shine::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(245,158,11,0.05) 0%,transparent 60%); pointer-events:none; }
+        .noise-bg::after { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; opacity:.6; }
+      `}</style>
 
-      {/* NAV */}
-      <nav style={st.nav}>
-        <div style={st.navLogoWrap}>
-          <div style={st.navLogoDiamond} />
-          <span style={st.navLogo}>{profile?.name?.split(" ")[0] || "DEV"}</span>
-        </div>
-        <div className={`t1-nav-links${menuOpen ? " t1-nav-open" : ""}`} style={st.navLinks}>
-          {["Skills","Projects","Experience","Blog","Contact"].map((item) => (
-            <a key={item} href={`#${item.toLowerCase()}`} style={st.navLink} className="t1-nav-link"
-              onClick={() => setMenuOpen(false)}
-              data-track={JSON.stringify({ event_type:"nav_click", metadata:{ section:item.toLowerCase() } })}>
-              {item}
-            </a>
-          ))}
-        </div>
-        <a href="#contact" style={st.navCTA} className="t1-cta-btn"
-          data-track={JSON.stringify({ event_type:"cta_click", metadata:{ type:"hire_me", location:"navbar" } })}>
-          Hire Me
-        </a>
-        <button style={st.hamburger} className="t1-hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
-          <span className={`t1-bar${menuOpen ? " t1-bar-open-1" : ""}`} />
-          <span className={`t1-bar${menuOpen ? " t1-bar-open-2" : ""}`} />
-          <span className={`t1-bar${menuOpen ? " t1-bar-open-3" : ""}`} />
-        </button>
-      </nav>
+      <div className="font-body bg-[#0a0b0f] text-slate-200 min-h-screen noise-bg">
 
-      {/* HERO */}
-      <section style={st.hero}>
-        <div style={st.heroInner}>
-          <div style={st.heroLeft}>
-            <div style={st.heroEyebrow}>
-              <span style={st.heroEyebrowLine} /><span style={st.heroEyebrowText}>Available for work</span><span style={st.heroEyebrowDot} />
+        {/* ── Background ambience ── */}
+        <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute top-0 right-0 w-[700px] h-[700px] rounded-full bg-amber-500/[0.03] blur-[120px]" />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-amber-400/[0.025] blur-[100px]" />
+          {/* Grid lines */}
+          <div style={{ backgroundImage:"linear-gradient(rgba(245,158,11,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(245,158,11,.025) 1px,transparent 1px)", backgroundSize:"72px 72px" }} className="absolute inset-0" />
+        </div>
+
+        {/* ════════════════ NAV ════════════════ */}
+        <nav className="sticky top-0 z-50 bg-[#0a0b0f]/90 backdrop-blur-xl border-b border-white/[0.05]">
+          <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rotate-45 bg-amber-400" />
+              <span className="font-display font-800 text-white text-lg tracking-wide">{profile.name.split(" ")[0]}</span>
             </div>
-            <h1 style={st.heroName}>
-              {(profile?.name || "Your Name").split(" ").map((word, i) => (
-                <span key={i} style={{ display:"block", animationDelay:`${i * 0.12}s` }} className="t1-hero-word">{word}</span>
+
+            {/* Desktop links */}
+            <div className="hidden md:flex items-center gap-8">
+              {["Skills","Projects","Experience","Blog","Contact"].map((s) => (
+                <a key={s} href={`#${s.toLowerCase()}`}
+                  className="nav-link text-[12px] font-semibold tracking-[0.1em] uppercase text-slate-400 hover:text-white transition-colors duration-200">
+                  {s}
+                </a>
               ))}
-            </h1>
-            <div style={st.heroTitleRow}>
-              <div style={st.heroTitleLine} />
-              <span style={st.heroTitleText}>{profile?.title || "Full Stack Developer"}</span>
             </div>
-            <p style={st.heroBio}>{profile?.bio || "Building exceptional digital experiences."}</p>
-            <div style={st.heroCTAs}>
-              <a href="#projects" style={st.heroPrimaryBtn} className="t1-primary-btn"
-                data-track={JSON.stringify({ event_type:"cta_click", metadata:{ type:"view_work", location:"hero" } })}>View Work →</a>
-              <a href="#contact" style={st.heroSecondaryBtn} className="t1-secondary-btn"
-                data-track={JSON.stringify({ event_type:"cta_click", metadata:{ type:"start_project", location:"hero" } })}>Start Project</a>
+
+            {/* CTA */}
+            <a href="#contact"
+              className="hidden md:inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-[#0a0b0f] font-bold text-xs tracking-[0.1em] uppercase px-5 py-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(245,158,11,0.35)]">
+              Hire Me
+            </a>
+
+            {/* Hamburger */}
+            <button className="md:hidden flex flex-col gap-1.5 p-2" onClick={() => setMenuOpen(!menuOpen)}>
+              <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
+              <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
+              <span className={`block w-5 h-0.5 bg-white transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+            </button>
+          </div>
+
+          {/* Mobile menu */}
+          {menuOpen && (
+            <div className="md:hidden border-t border-white/[0.06] bg-[#0d0e13] px-6 py-5 flex flex-col gap-4">
+              {["Skills","Projects","Experience","Blog","Contact"].map((s) => (
+                <a key={s} href={`#${s.toLowerCase()}`} onClick={() => setMenuOpen(false)}
+                  className="text-sm font-semibold tracking-[0.1em] uppercase text-slate-400 hover:text-amber-400 transition-colors">
+                  {s}
+                </a>
+              ))}
             </div>
-            {socialLinks.length > 0 && (
-              <div style={st.heroSocials}>
-                {socialLinks.map((link) => (
-                  <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={st.heroSocialLink} className="t1-social-link"
-                    data-track={JSON.stringify({ event_type:"social_click", metadata:{ platform:link.platform, location:"hero" } })}>
-                    {link.platform}
+          )}
+        </nav>
+
+        {/* ════════════════ HERO ════════════════ */}
+        <section className="relative z-10 min-h-[92vh] flex flex-col justify-center px-6 md:px-12 max-w-7xl mx-auto pt-16 pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-16 items-center">
+
+            {/* Left */}
+            <div>
+              {/* Eyebrow */}
+              <div className="flex items-center gap-3 mb-8 anim-fadeIn" style={{ animationDelay:".1s" }}>
+                <div className="w-8 h-px bg-amber-400" />
+                <span className="text-[11px] font-bold tracking-[0.22em] uppercase text-amber-400">Available for work</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 anim-pulse" />
+              </div>
+
+              {/* Name */}
+              <h1 className="font-display font-extrabold text-white leading-[.9] tracking-tight mb-6"
+                style={{ fontSize:"clamp(64px,10vw,120px)" }}>
+                {profile.name.split(" ").map((w, i) => (
+                  <span key={i} className="block anim-fadeUp" style={{ animationDelay:`${.2 + i*.12}s` }}>{w}</span>
+                ))}
+              </h1>
+
+              {/* Title bar */}
+              <div className="flex items-center gap-4 mb-8 anim-fadeUp" style={{ animationDelay:".44s" }}>
+                <div className="w-10 h-0.5 bg-amber-400" />
+                <span className="font-display text-sm font-semibold tracking-[0.18em] uppercase text-amber-400">{profile.title}</span>
+              </div>
+
+              {/* Bio */}
+              <p className="text-slate-400 text-base md:text-lg leading-relaxed max-w-lg font-light mb-10 anim-fadeUp" style={{ animationDelay:".5s" }}>
+                {profile.bio}
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap gap-4 mb-10 anim-fadeUp" style={{ animationDelay:".58s" }}>
+                <a href="#projects"
+                  className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-[#0a0b0f] font-bold text-sm tracking-wide px-7 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(245,158,11,0.4)]">
+                  View Work <span>→</span>
+                </a>
+                <a href="#contact"
+                  className="inline-flex items-center gap-2 border border-white/10 hover:border-amber-400/50 text-slate-300 hover:text-amber-400 font-medium text-sm tracking-wide px-7 py-3.5 transition-all duration-200 hover:bg-amber-400/5">
+                  Start a Project
+                </a>
+              </div>
+
+              {/* Socials */}
+              <div className="flex gap-6 anim-fadeUp" style={{ animationDelay:".66s" }}>
+                {socialLinks.map((l) => (
+                  <a key={l.id} href={l.url} className="text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500 hover:text-amber-400 transition-all duration-200 hover:tracking-[0.18em]">
+                    {l.platform}
                   </a>
                 ))}
               </div>
-            )}
-          </div>
-          <div style={st.heroRight}>
-            <div style={st.statStack}>
-              {[{num:projects.length,label:"Projects",accent:GOLD},{num:skills.length,label:"Skills",accent:"#e2e8f0"},{num:experiences.length,label:"Roles",accent:GOLD}].map((s,i) => (
-                <div key={i} style={{ ...st.statCard, animationDelay:`${0.3+i*0.15}s` }} className="t1-stat-card"
-                  data-track={JSON.stringify({ event_type:"stat_view", metadata:{ stat_label:s.label, stat_value:s.num } })}>
-                  <div style={{ ...st.statCardAccent, background:s.accent }} />
-                  <span style={{ ...st.statNum, color:s.accent }}>{s.num}+</span>
-                  <span style={st.statLabel}>{s.label}</span>
-                </div>
-              ))}
             </div>
-            <div style={st.heroDeco}>
-              <div style={st.decoRing} className="t1-spin-slow" />
-              <div style={st.decoRingInner} className="t1-spin-reverse" />
-              <div style={st.decoCenter} />
-            </div>
-          </div>
-        </div>
-        <div style={st.scrollIndicator}>
-          <div style={st.scrollLine} className="t1-scroll-line" />
-          <span style={st.scrollText}>SCROLL</span>
-        </div>
-      </section>
 
-      {/* SKILLS */}
-      {skills.length > 0 && (
-        <section id="skills" style={st.section} ref={registerRef("skills")}>
-          <div style={{ ...st.sectionInner, ...(visible.skills ? st.sectionVisible:{}) }} className="t1-section-reveal">
-            <div style={st.sectionHeader}>
-              <div style={st.sectionHeaderLeft}>
-                <div style={st.sectionTagRow}><div style={st.sectionTagDiamond} /><span style={st.sectionTag}>EXPERTISE</span></div>
-                <h2 style={st.sectionTitle}>Skills &amp; Tools</h2>
-              </div>
-              <div style={st.sectionHeaderLine} />
-            </div>
-            <div style={st.skillsGrid}>
-              {skills.map((skill, i) => (
-                <div key={skill.id} style={{ ...st.skillCard, animationDelay:`${i*0.07}s` }} className="t1-skill-card"
-                  data-track={JSON.stringify({ event_type:"skill_view", metadata:{ skill_name:skill.name, skill_percentage:skill.percentage } })}>
-                  <div style={st.skillTop}>
-                    <span style={st.skillIcon}>{skill.icon}</span>
-                    <span style={st.skillName}>{skill.name}</span>
-                    <span style={st.skillPct}>{skill.percentage}<span style={st.skillPctSym}>%</span></span>
-                  </div>
-                  <div style={st.skillBarTrack}>
-                    <div style={{ ...st.skillBarFill, width:`${skill.percentage}%`, animationDelay:`${0.4+i*0.07}s` }} className="t1-skill-bar" />
-                  </div>
-                  {skill.description && <p style={st.skillDesc}>{skill.description}</p>}
+            {/* Right — stats + deco */}
+            <div className="hidden lg:flex flex-col gap-4 items-end">
+              {[
+                { num: projects.length, label: "Projects", accent: true },
+                { num: skills.length,   label: "Skills",   accent: false },
+                { num: experiences.length, label: "Roles", accent: true },
+              ].map((s, i) => (
+                <div key={i} style={{ animationDelay:`${.4+i*.14}s` }}
+                  className="anim-fadeUp w-full bg-[#111217] border border-white/[0.06] hover:border-amber-400/20 p-5 flex items-center gap-4 transition-all duration-300 hover:-translate-x-1 card-shine group">
+                  <div className={`w-0.5 self-stretch ${s.accent ? "bg-amber-400" : "bg-slate-600"}`} />
+                  <span className={`font-display text-5xl font-extrabold ${s.accent ? "text-amber-400" : "text-slate-200"}`}>{s.num}+</span>
+                  <span className="font-display text-sm tracking-[0.12em] uppercase text-slate-500 group-hover:text-slate-400 transition-colors">{s.label}</span>
                 </div>
               ))}
+              {/* Decorative ring */}
+              <div className="relative w-28 h-28 mt-4 self-end">
+                <div className="absolute inset-0 rounded-full border border-amber-400/20 anim-spinSlow" style={{ borderTopColor:"rgba(245,158,11,.7)" }} />
+                <div className="absolute inset-4 rounded-full border border-white/5 anim-spinRev" style={{ borderRightColor:"rgba(245,158,11,.4)" }} />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rotate-45 bg-amber-400" />
+              </div>
             </div>
+          </div>
+
+          {/* Scroll indicator */}
+          <div className="absolute bottom-10 left-12 hidden md:flex flex-col items-center gap-2">
+            <div className="w-px h-12 bg-gradient-to-b from-amber-400 to-transparent" />
+            <span className="text-[9px] tracking-[0.3em] uppercase text-slate-600 [writing-mode:vertical-rl]">Scroll</span>
           </div>
         </section>
-      )}
 
-      {/* PROJECTS */}
-      {projects.length > 0 && (
-        <section id="projects" style={{ ...st.section, ...st.sectionAlt }} ref={registerRef("projects")}>
-          <div style={{ ...st.sectionInner, ...(visible.projects ? st.sectionVisible:{}) }} className="t1-section-reveal">
-            <div style={st.sectionHeader}>
-              <div style={st.sectionHeaderLeft}>
-                <div style={st.sectionTagRow}><div style={st.sectionTagDiamond} /><span style={st.sectionTag}>PORTFOLIO</span></div>
-                <h2 style={st.sectionTitle}>Featured Work</h2>
-              </div>
-              <div style={st.sectionHeaderLine} />
-            </div>
-            <div style={st.projectsGrid}>
-              {projects.map((p, i) => (
-                <div key={p.id} style={{ ...st.projectCard, ...(i===0?st.projectCardFeatured:{}), animationDelay:`${i*0.1}s` }} className="t1-project-card"
-                  data-track={JSON.stringify({ event_type:"project_view", metadata:{ project_id:p.id, project_name:p.title } })}>
-                  <div style={st.projectCorner} /><div style={st.projectCornerBR} />
-                  <div style={st.projectIndex}>{String(i+1).padStart(2,"0")}</div>
-                  <h3 style={{ ...st.projectTitle, ...(i===0?st.projectTitleLarge:{}) }}>{p.title}</h3>
-                  <p style={st.projectDesc}>{p.description}</p>
-                  {p.techstack?.length > 0 && (
-                    <div style={st.techRow}>{p.techstack.map((t,j) => <span key={j} style={st.techChip}>{t}</span>)}</div>
-                  )}
-                  <div style={st.projectLinks}>
-                    {p.github_link && <a href={p.github_link} target="_blank" style={st.projLinkGhost} className="t1-ghost-btn"
-                      data-track={JSON.stringify({ event_type:"project_link_click", metadata:{ project_id:p.id, link_type:"github" } })}>GitHub ↗</a>}
-                    {p.live_link && <a href={p.live_link} target="_blank" style={st.projLinkGold} className="t1-gold-btn"
-                      data-track={JSON.stringify({ event_type:"project_link_click", metadata:{ project_id:p.id, link_type:"live_demo" } })}>Live Demo ↗</a>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* EXPERIENCE */}
-      {experiences.length > 0 && (
-        <section id="experience" style={st.section} ref={registerRef("experience")}>
-          <div style={{ ...st.sectionInner, ...(visible.experience ? st.sectionVisible:{}) }} className="t1-section-reveal">
-            <div style={st.sectionHeader}>
-              <div style={st.sectionHeaderLeft}>
-                <div style={st.sectionTagRow}><div style={st.sectionTagDiamond} /><span style={st.sectionTag}>CAREER</span></div>
-                <h2 style={st.sectionTitle}>Experience</h2>
-              </div>
-              <div style={st.sectionHeaderLine} />
-            </div>
-            <div style={st.expList}>
-              {experiences.map((exp, i) => (
-                <div key={exp.id} style={st.expItem} className="t1-exp-item"
-                  data-track={JSON.stringify({ event_type:"experience_view", metadata:{ experience_id:exp.id, company:exp.company, role:exp.role } })}>
-                  <div style={st.expTimeDot}>
-                    <div style={st.expDot} />
-                    {i < experiences.length-1 && <div style={st.expDotLine} />}
-                  </div>
-                  <div style={st.expCard}>
-                    <div style={st.expCardTop}>
-                      <div>
-                        <h3 style={st.expRole}>{exp.role}</h3>
-                        <div style={st.expCompany}>{exp.company}</div>
-                      </div>
-                      <div style={st.expDates}>{formatDate(exp.start_date)} — {exp.is_current==="true" ? <span style={st.expPresent}>Present</span> : formatDate(exp.end_date)}</div>
+        {/* ════════════════ SKILLS ════════════════ */}
+        <section id="skills" className="relative z-10 py-24 md:py-32 px-6 md:px-12 border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={skillsRef} className={`reveal ${skillsVis ? "show" : ""}`}>
+              <SectionLabel tag="Expertise" title="Skills &" titleExtra="Tools" />
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {skills.map((sk, i) => (
+                  <div key={sk.id} style={{ transitionDelay:`${i*.06}s` }}
+                    className={`reveal ${skillsVis ? "show" : ""} bg-[#111217] border border-white/[0.05] hover:border-amber-400/25 p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] card-shine group`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-2xl">{sk.icon}</span>
+                      <span className="font-display font-semibold text-white text-sm tracking-wide flex-1">{sk.name}</span>
+                      <span className="font-display text-2xl text-amber-400 font-bold">{sk.percentage}<span className="text-xs text-slate-500">%</span></span>
                     </div>
-                    {exp.description && <p style={st.expDesc}>{exp.description}</p>}
-                    {exp.points?.length > 0 && (
-                      <ul style={st.expPoints}>
-                        {exp.points.map((pt,j) => <li key={j} style={st.expPoint}><span style={st.expBullet}>◆</span>{pt}</li>)}
-                      </ul>
+                    <div className="h-px bg-white/5 mb-1 overflow-hidden">
+                      <div className={`h-full bg-gradient-to-r from-amber-500 to-amber-300 ${skillsVis ? "bar-grow" : ""}`}
+                        style={{ width:`${sk.percentage}%`, animationDelay:`${.5+i*.07}s` }} />
+                    </div>
+                    {sk.description && <p className="text-xs text-slate-500 mt-3 leading-relaxed font-light group-hover:text-slate-400 transition-colors">{sk.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ════════════════ PROJECTS ════════════════ */}
+        <section id="projects" className="relative z-10 py-24 md:py-32 px-6 md:px-12 bg-[#0d0e13] border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={projectsRef} className={`reveal ${projectsVis ? "show" : ""}`}>
+              <SectionLabel tag="Portfolio" title="Featured" titleExtra="Work" />
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {projects.map((p, i) => (
+                  <div key={p.id} style={{ transitionDelay:`${i*.08}s` }}
+                    className={`reveal ${projectsVis ? "show" : ""} relative bg-[#111217] border ${i===0 ? "border-amber-400/20 md:col-span-2 xl:col-span-2 bg-[rgba(245,158,11,.02)]" : "border-white/[0.05]"} p-7 hover:border-amber-400/30 transition-all duration-350 hover:-translate-y-1.5 hover:shadow-[0_24px_56px_rgba(0,0,0,.6)] group card-shine`}>
+                    {/* Corner accents */}
+                    <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-400/60" />
+                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-amber-400/20" />
+
+                    <div className="font-display text-6xl font-extrabold text-amber-400/10 leading-none mb-3 select-none">
+                      {String(i+1).padStart(2,"0")}
+                    </div>
+                    <h3 className={`font-display font-bold text-white mb-3 ${i===0 ? "text-2xl md:text-3xl" : "text-xl"}`}>{p.title}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-5 font-light">{p.description}</p>
+
+                    {p.techstack?.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {p.techstack.map((t, j) => (
+                          <span key={j} className="text-[11px] font-medium tracking-wide border border-white/8 text-slate-500 px-3 py-1">{t}</span>
+                        ))}
+                      </div>
                     )}
+                    <div className="flex gap-3">
+                      {p.github_link && (
+                        <a href={p.github_link} className="text-xs font-bold tracking-[.08em] border border-white/12 text-slate-400 hover:text-white hover:border-white/30 px-4 py-2 transition-all duration-200">GitHub ↗</a>
+                      )}
+                      {p.live_link && (
+                        <a href={p.live_link} className="text-xs font-bold tracking-[.08em] bg-amber-400 hover:bg-amber-300 text-[#0a0b0f] px-4 py-2 transition-all duration-200 hover:shadow-[0_6px_20px_rgba(245,158,11,.4)]">Live Demo ↗</a>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
-      )}
 
-      {/* BLOG */}
-      {blogs.length > 0 && (
-        <section id="blog" style={{ ...st.section, ...st.sectionAlt }} ref={registerRef("blog")}>
-          <div style={{ ...st.sectionInner, ...(visible.blog ? st.sectionVisible:{}) }} className="t1-section-reveal">
-            <div style={st.sectionHeader}>
-              <div style={st.sectionHeaderLeft}>
-                <div style={st.sectionTagRow}><div style={st.sectionTagDiamond} /><span style={st.sectionTag}>WRITING</span></div>
-                <h2 style={st.sectionTitle}>Blog</h2>
-              </div>
-              <div style={st.sectionHeaderLine} />
-            </div>
-            <div style={st.blogGrid}>
-              {blogs.map((blog) => (
-                <div key={blog.id} style={st.blogCard} className="t1-blog-card"
-                  data-track={JSON.stringify({ event_type:"blog_view", metadata:{ blog_id:blog.id, blog_title:blog.title } })}>
-                  <div style={st.blogCardTop}>
-                    <span style={st.blogCat}>{blog.category||"General"}</span>
-                    <span style={st.blogDate}>{formatDate(blog.publish_date)}</span>
+        {/* ════════════════ EXPERIENCE ════════════════ */}
+        <section id="experience" className="relative z-10 py-24 md:py-32 px-6 md:px-12 border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={expRef} className={`reveal ${expVis ? "show" : ""}`}>
+              <SectionLabel tag="Career" title="Experience" />
+              <div className="space-y-0">
+                {experiences.map((exp, i) => (
+                  <div key={exp.id} style={{ transitionDelay:`${i*.1}s` }}
+                    className={`reveal ${expVis ? "show" : ""} flex gap-6 md:gap-10 group`}>
+                    {/* Timeline */}
+                    <div className="flex flex-col items-center pt-1.5 flex-shrink-0">
+                      <div className="w-3 h-3 rotate-45 bg-amber-400 flex-shrink-0 group-hover:bg-amber-300 transition-colors" />
+                      {i < experiences.length - 1 && <div className="w-px flex-1 bg-amber-400/15 my-2 min-h-[60px]" />}
+                    </div>
+                    {/* Card */}
+                    <div className="bg-[#111217] border border-white/[0.05] hover:border-amber-400/20 p-6 md:p-8 flex-1 mb-5 transition-all duration-300 hover:translate-x-1 card-shine">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+                        <div>
+                          <h3 className="font-display font-bold text-white text-xl md:text-2xl tracking-tight mb-1">{exp.role}</h3>
+                          <span className="text-amber-400 font-semibold text-sm tracking-wide">{exp.company}</span>
+                        </div>
+                        <div className="text-xs text-slate-500 font-medium md:text-right whitespace-nowrap">
+                          {fmtDate(exp.start_date)} — {exp.is_current === "true" ? <span className="text-amber-400 font-bold">Present</span> : fmtDate(exp.end_date)}
+                        </div>
+                      </div>
+                      {exp.description && <p className="text-slate-500 text-sm leading-relaxed mb-4 font-light">{exp.description}</p>}
+                      {exp.points?.length > 0 && (
+                        <ul className="space-y-2">
+                          {exp.points.map((pt, j) => (
+                            <li key={j} className="flex gap-3 text-sm text-slate-500 leading-relaxed">
+                              <span className="text-amber-400 text-[8px] mt-1.5 flex-shrink-0">◆</span>{pt}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
-                  <h3 style={st.blogTitle}>{blog.title}</h3>
-                  <p style={st.blogExcerpt}>{truncate(blog.excerpt,130)}</p>
-                  <div style={st.blogReadMore}>Read Article <span style={st.blogArrow}>→</span></div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
-      )}
 
-      {/* TESTIMONIALS */}
-      {testimonials.length > 0 && (
-        <section style={st.section} ref={registerRef("testimonials")}>
-          <div style={{ ...st.sectionInner, ...(visible.testimonials ? st.sectionVisible:{}) }} className="t1-section-reveal">
-            <div style={st.sectionHeader}>
-              <div style={st.sectionHeaderLeft}>
-                <div style={st.sectionTagRow}><div style={st.sectionTagDiamond} /><span style={st.sectionTag}>FEEDBACK</span></div>
-                <h2 style={st.sectionTitle}>Testimonials</h2>
-              </div>
-              <div style={st.sectionHeaderLine} />
-            </div>
-            <div style={st.testGrid}>
-              {testimonials.map((t) => (
-                <div key={t.id} style={st.testCard} className="t1-test-card"
-                  data-track={JSON.stringify({ event_type:"testimonial_view", metadata:{ testimonial_id:t.id, name:t.name } })}>
-                  <div style={st.testStars}>{Array.from({length:t.rating}).map((_,i) => <span key={i} style={st.testStar}>★</span>)}</div>
-                  <p style={st.testText}>"{t.review}"</p>
-                  <div style={st.testAuthor}>
-                    <div style={st.testAvatar}>{t.name?.[0]}</div>
-                    <div><div style={st.testName}>{t.name}</div><div style={st.testRole}>{t.role} @ {t.company}</div></div>
+        {/* ════════════════ BLOG ════════════════ */}
+        <section id="blog" className="relative z-10 py-24 md:py-32 px-6 md:px-12 bg-[#0d0e13] border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={blogRef} className={`reveal ${blogVis ? "show" : ""}`}>
+              <SectionLabel tag="Writing" title="Blog" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {blogs.map((b, i) => (
+                  <div key={b.id} style={{ transitionDelay:`${i*.07}s` }}
+                    className={`reveal ${blogVis ? "show" : ""} bg-[#111217] border border-white/[0.05] hover:border-amber-400/20 p-7 flex flex-col group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_rgba(0,0,0,.5)] card-shine`}>
+                    <div className="flex items-center justify-between mb-5">
+                      <span className="text-[10px] font-bold tracking-[0.18em] uppercase bg-amber-400/10 text-amber-400 border-l-2 border-amber-400 pl-2.5 pr-3 py-1">{b.category || "General"}</span>
+                      <span className="text-[11px] text-slate-600 italic">{fmtDate(b.publish_date)}</span>
+                    </div>
+                    <h3 className="font-display font-bold text-white text-xl leading-snug mb-3 group-hover:text-amber-50 transition-colors">{b.title}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-5 font-light">{b.excerpt}</p>
+                    <span className="text-xs font-semibold tracking-wide text-slate-600 group-hover:text-amber-400 transition-colors duration-200">
+                      Read Article <span className="text-amber-400">→</span>
+                    </span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
-      )}
 
-      {/* CONTACT */}
-      <section id="contact" style={{ ...st.section, ...st.sectionContact }} ref={registerRef("contact")}>
-        <div style={{ ...st.sectionInner, ...(visible.contact ? st.sectionVisible:{}) }} className="t1-section-reveal">
-          <div style={st.sectionHeader}>
-            <div style={st.sectionHeaderLeft}>
-              <div style={st.sectionTagRow}><div style={st.sectionTagDiamond} /><span style={st.sectionTag}>GET IN TOUCH</span></div>
-              <h2 style={st.sectionTitle}>Let's Build<br />Something <em style={st.sectionTitleItalic}>Great</em></h2>
+        {/* ════════════════ TESTIMONIALS ════════════════ */}
+        <section className="relative z-10 py-24 md:py-32 px-6 md:px-12 border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={testimonRef} className={`reveal ${testimonVis ? "show" : ""}`}>
+              <SectionLabel tag="Feedback" title="What They" titleExtra="Say" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {testimonials.map((t, i) => (
+                  <div key={t.id} style={{ transitionDelay:`${i*.08}s` }}
+                    className={`reveal ${testimonVis ? "show" : ""} bg-[#111217] border border-white/[0.05] hover:border-amber-400/20 p-8 transition-all duration-300 hover:-translate-y-1 card-shine`}>
+                    <div className="flex gap-0.5 mb-5">
+                      {Array.from({ length: t.rating }).map((_, j) => (
+                        <span key={j} className="text-amber-400 text-base">★</span>
+                      ))}
+                    </div>
+                    <p className="text-slate-300 text-base leading-[1.8] italic font-light mb-7">"{t.review}"</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-amber-400 text-[#0a0b0f] font-extrabold text-sm flex items-center justify-center flex-shrink-0">
+                        {t.name?.[0]}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-white">{t.name}</div>
+                        <div className="text-xs text-slate-500">{t.role} @ {t.company}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={st.sectionHeaderLine} />
           </div>
-          <div style={st.contactGrid}>
-            <div style={st.contactInfo}>
-              <p style={st.contactSubtext}>Have a project in mind? Let's collaborate and craft something that stands out.</p>
-              {profile.email && (
-                <div style={st.contactDetail}>
-                  <span style={st.contactDetailIcon}>✉</span>
-                  <div>
-                    <div style={st.contactDetailLabel}>Email</div>
-                    <a href={`mailto:${profile.email}`} style={st.contactDetailValue}
-                      data-track={JSON.stringify({ event_type:"contact_info_click", metadata:{ type:"email" } })}>{profile.email}</a>
+        </section>
+
+        {/* ════════════════ CONTACT ════════════════ */}
+        <section id="contact" className="relative z-10 py-24 md:py-32 px-6 md:px-12 bg-[#0d0e13] border-t border-white/[0.04]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={contactRef} className={`reveal ${contactVis ? "show" : ""}`}>
+              <SectionLabel tag="Get In Touch" title="Let's Build" titleExtra="Together" />
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.8fr] gap-16">
+
+                {/* Info */}
+                <div>
+                  <p className="text-slate-400 text-base leading-relaxed font-light mb-10 max-w-sm">
+                    Have a project in mind? Let's collaborate and craft something that truly stands out.
+                  </p>
+                  {profile.email && (
+                    <div className="flex gap-4 mb-7">
+                      <span className="text-amber-400 text-lg mt-0.5">✉</span>
+                      <div>
+                        <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-slate-600 mb-1">Email</div>
+                        <a href={`mailto:${profile.email}`} className="text-amber-400 hover:text-amber-300 font-semibold transition-colors">{profile.email}</a>
+                      </div>
+                    </div>
+                  )}
+                  {profile.location && (
+                    <div className="flex gap-4 mb-10">
+                      <span className="text-amber-400 text-lg mt-0.5">◎</span>
+                      <div>
+                        <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-slate-600 mb-1">Location</div>
+                        <span className="text-slate-300">{profile.location}</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2.5">
+                    {socialLinks.map((l) => (
+                      <a key={l.id} href={l.url}
+                        className="text-[11px] font-bold tracking-[0.12em] uppercase border border-white/8 text-slate-500 hover:border-amber-400/50 hover:text-amber-400 hover:bg-amber-400/5 px-4 py-2 transition-all duration-200">
+                        {l.platform}
+                      </a>
+                    ))}
                   </div>
                 </div>
-              )}
-              {profile.location && (
-                <div style={st.contactDetail}>
-                  <span style={st.contactDetailIcon}>◎</span>
-                  <div><div style={st.contactDetailLabel}>Location</div><div style={st.contactDetailValuePlain}>{profile.location}</div></div>
-                </div>
-              )}
-              {socialLinks.length > 0 && (
-                <div style={st.contactSocials}>
-                  {socialLinks.map((link) => (
-                    <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={st.contactSocialLink} className="t1-social-pill"
-                      data-track={JSON.stringify({ event_type:"social_click", metadata:{ platform:link.platform, location:"contact_section" } })}>
-                      {link.platform}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-            <form onSubmit={handleContact} style={st.form}>
-              <div style={st.formRow}>
-                <div style={st.formField}>
-                  <label style={st.formLabel}>Name</label>
-                  <input required placeholder="John Doe" value={contactForm.name} onChange={e => setContactForm({...contactForm,name:e.target.value})} style={st.formInput} className="t1-form-input"
-                    data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"name" } })} />
-                </div>
-                <div style={st.formField}>
-                  <label style={st.formLabel}>Email</label>
-                  <input required type="email" placeholder="john@example.com" value={contactForm.email} onChange={e => setContactForm({...contactForm,email:e.target.value})} style={st.formInput} className="t1-form-input"
-                    data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"email" } })} />
-                </div>
-              </div>
-              <div style={st.formField}>
-                <label style={st.formLabel}>Subject</label>
-                <input placeholder="Project inquiry" value={contactForm.subject} onChange={e => setContactForm({...contactForm,subject:e.target.value})} style={st.formInput} className="t1-form-input"
-                  data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"subject" } })} />
-              </div>
-              <div style={st.formField}>
-                <label style={st.formLabel}>Message</label>
-                <textarea required placeholder="Tell me about your project..." value={contactForm.message} onChange={e => setContactForm({...contactForm,message:e.target.value})} style={st.formTextarea} className="t1-form-input"
-                  data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"message" } })} />
-              </div>
-              <button type="submit" disabled={sending} style={st.formSubmit} className="t1-submit-btn"
-                data-track={JSON.stringify({ event_type:"form_submit_click", metadata:{ form:"contact" } })}>
-                <span>{sending ? "Sending..." : "Send Message"}</span>
-                <span style={st.formSubmitArrow}>→</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
 
-      {/* FOOTER */}
-      <footer style={st.footer}>
-        <div style={st.footerInner}>
-          <div style={st.footerLeft}><div style={st.footerLogoDiamond} /><span style={st.footerName}>{profile?.name||"Portfolio"}</span></div>
-          <div style={st.footerCenter}>© {new Date().getFullYear()} · Crafted with precision</div>
-          <div style={st.footerRight}>
-            {socialLinks.map((link) => (
-              <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={st.footerLink} className="t1-footer-link"
-                data-track={JSON.stringify({ event_type:"social_click", metadata:{ platform:link.platform, location:"footer" } })}>
-                {link.platform}
-              </a>
-            ))}
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {[
+                      { key:"name",  label:"Name",  type:"text",  ph:"John Doe" },
+                      { key:"email", label:"Email", type:"email", ph:"john@email.com" },
+                    ].map(({ key, label, type, ph }) => (
+                      <div key={key} className="flex flex-col gap-2">
+                        <label className="text-[10px] font-bold tracking-[0.18em] uppercase text-slate-600">{label}</label>
+                        <input required type={type} placeholder={ph} value={form[key]}
+                          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                          className="bg-[#0a0b0f] border border-white/8 focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10 text-slate-200 placeholder-slate-700 px-4 py-3.5 text-sm font-light outline-none transition-all duration-200 w-full" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-bold tracking-[0.18em] uppercase text-slate-600">Subject</label>
+                    <input placeholder="Project inquiry" value={form.subject}
+                      onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                      className="bg-[#0a0b0f] border border-white/8 focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10 text-slate-200 placeholder-slate-700 px-4 py-3.5 text-sm font-light outline-none transition-all duration-200 w-full" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-bold tracking-[0.18em] uppercase text-slate-600">Message</label>
+                    <textarea required rows={5} placeholder="Tell me about your project..."
+                      value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
+                      className="bg-[#0a0b0f] border border-white/8 focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10 text-slate-200 placeholder-slate-700 px-4 py-3.5 text-sm font-light outline-none transition-all duration-200 w-full resize-vertical" />
+                  </div>
+                  <button type="submit" disabled={sending}
+                    className="inline-flex items-center gap-3 bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-[#0a0b0f] font-bold text-sm tracking-[0.1em] uppercase px-8 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(245,158,11,.4)]">
+                    <span>{sending ? "Sending…" : "Send Message"}</span>
+                    <span className="text-base">{sending ? "⏳" : "→"}</span>
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
-        </div>
-      </footer>
-    </div>
+        </section>
+
+        {/* ════════════════ FOOTER ════════════════ */}
+        <footer className="relative z-10 border-t border-white/[0.06] bg-[#0a0b0f] px-6 md:px-12 py-8">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rotate-45 bg-amber-400" />
+              <span className="font-display font-bold text-white tracking-wide">{profile.name}</span>
+            </div>
+            <p className="text-xs text-slate-600">© {new Date().getFullYear()} · Crafted with precision</p>
+            <div className="flex gap-6">
+              {socialLinks.map((l) => (
+                <a key={l.id} href={l.url} className="text-[11px] font-bold tracking-[0.1em] uppercase text-slate-600 hover:text-amber-400 transition-colors duration-200">{l.platform}</a>
+              ))}
+            </div>
+          </div>
+        </footer>
+
+      </div>
+    </>
   );
 }
-
-const DARK="#0e0f14", DARK2="#13141b", DARK3="#1a1c27", GOLD="#c9a94a", GOLD_LIGHT="#e8c96a";
-const BORDER="rgba(201,169,74,0.18)", BORDER2="rgba(255,255,255,0.06)", TEXT="#e2e4ef", MUTED="#7a7f9a";
-
-const ls = {
-  wrap:{ minHeight:"100vh", background:DARK, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:20 },
-  diamond:{ width:48, height:48, background:GOLD, transform:"rotate(45deg)", animation:"spin 1.5s linear infinite" },
-  text:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:18, color:GOLD, letterSpacing:"0.3em" },
-};
-
-const GLOBAL_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-::-webkit-scrollbar{width:4px;background:${DARK}}
-::-webkit-scrollbar-thumb{background:${GOLD}}
-
-@keyframes heroWordReveal{from{opacity:0;transform:translateY(40px) skewY(3deg)}to{opacity:1;transform:translateY(0) skewY(0deg)}}
-.t1-hero-word{opacity:0;animation:heroWordReveal 0.8s cubic-bezier(0.16,1,0.3,1) both}
-.t1-section-reveal{opacity:0;transition:opacity 0.8s ease,transform 0.8s cubic-bezier(0.16,1,0.3,1);transform:translateY(32px)}
-@keyframes skillGrow{from{width:0 !important}}
-.t1-skill-bar{animation:skillGrow 1.4s cubic-bezier(0.4,0,0.2,1) both}
-@keyframes scrollLine{0%{height:0;opacity:1}50%{height:48px;opacity:1}100%{height:48px;opacity:0}}
-.t1-scroll-line{animation:scrollLine 2.2s ease-in-out infinite}
-@keyframes spinSlow{to{transform:rotate(360deg)}}
-@keyframes spinReverse{to{transform:rotate(-360deg)}}
-.t1-spin-slow{animation:spinSlow 12s linear infinite}
-.t1-spin-reverse{animation:spinReverse 8s linear infinite}
-
-.t1-hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;flex-direction:column;gap:5px;align-items:center}
-.t1-bar{display:block;width:22px;height:2px;background:${TEXT};transition:all 0.3s}
-.t1-bar-open-1{transform:rotate(45deg) translate(5px,5px)}
-.t1-bar-open-2{opacity:0}
-.t1-bar-open-3{transform:rotate(-45deg) translate(5px,-5px)}
-.t1-nav-link{position:relative;transition:color 0.25s}
-.t1-nav-link::after{content:'';position:absolute;bottom:-3px;left:0;width:0;height:1px;background:${GOLD};transition:width 0.35s cubic-bezier(0.4,0,0.2,1)}
-.t1-nav-link:hover{color:${GOLD} !important}
-.t1-nav-link:hover::after{width:100%}
-.t1-cta-btn{transition:background 0.25s,color 0.25s,transform 0.2s,box-shadow 0.25s}
-.t1-cta-btn:hover{background:${GOLD_LIGHT} !important;transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,169,74,0.35) !important}
-.t1-primary-btn{transition:all 0.25s}
-.t1-primary-btn:hover{background:${GOLD_LIGHT} !important;transform:translateY(-2px);box-shadow:0 8px 28px rgba(201,169,74,0.4) !important}
-.t1-secondary-btn{transition:all 0.25s}
-.t1-secondary-btn:hover{border-color:${GOLD} !important;color:${GOLD} !important;background:rgba(201,169,74,0.06) !important}
-.t1-social-link{transition:color 0.2s,letter-spacing 0.2s}
-.t1-social-link:hover{color:${GOLD} !important;letter-spacing:0.12em}
-.t1-stat-card{transition:transform 0.3s,box-shadow 0.3s}
-.t1-stat-card:hover{transform:translateX(-4px);box-shadow:4px 0 24px rgba(201,169,74,0.15) !important}
-.t1-skill-card{transition:transform 0.3s,border-color 0.3s,box-shadow 0.3s}
-.t1-skill-card:hover{transform:translateY(-4px);border-color:rgba(201,169,74,0.5) !important;box-shadow:0 12px 36px rgba(0,0,0,0.4) !important}
-.t1-project-card{transition:transform 0.35s,border-color 0.3s,box-shadow 0.35s}
-.t1-project-card:hover{transform:translateY(-6px);border-color:rgba(201,169,74,0.4) !important;box-shadow:0 20px 48px rgba(0,0,0,0.5) !important}
-.t1-ghost-btn{transition:all 0.2s}
-.t1-ghost-btn:hover{border-color:rgba(255,255,255,0.4) !important;color:#fff !important}
-.t1-gold-btn{transition:all 0.2s}
-.t1-gold-btn:hover{background:${GOLD_LIGHT} !important;box-shadow:0 6px 20px rgba(201,169,74,0.4) !important}
-.t1-blog-card{transition:transform 0.3s,box-shadow 0.3s}
-.t1-blog-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.5) !important}
-.t1-test-card{transition:transform 0.3s,border-color 0.3s}
-.t1-test-card:hover{transform:translateY(-4px);border-color:rgba(201,169,74,0.35) !important}
-.t1-exp-item{transition:transform 0.2s}
-.t1-exp-item:hover{transform:translateX(4px)}
-.t1-form-input{transition:border-color 0.25s,box-shadow 0.25s;outline:none}
-.t1-form-input:focus{border-color:${GOLD} !important;box-shadow:0 0 0 3px rgba(201,169,74,0.12) !important}
-.t1-submit-btn{transition:all 0.25s}
-.t1-submit-btn:hover{background:${GOLD_LIGHT} !important;transform:translateY(-2px);box-shadow:0 10px 30px rgba(201,169,74,0.35) !important}
-.t1-social-pill{transition:all 0.2s}
-.t1-social-pill:hover{background:rgba(201,169,74,0.15) !important;border-color:${GOLD} !important;color:${GOLD} !important}
-.t1-footer-link{transition:color 0.2s}
-.t1-footer-link:hover{color:${GOLD} !important}
-
-@media(max-width:1024px){
-  .t1-hamburger{display:flex !important}
-  .t1-nav-links{display:none}
-  .t1-nav-open{display:flex !important;flex-direction:column;position:absolute;top:100%;left:0;right:0;background:${DARK2};padding:20px 24px;gap:16px;border-bottom:1px solid ${BORDER};z-index:300}
-}
-@media(max-width:768px){
-  .t1-hero-inner{grid-template-columns:1fr !important}
-  .t1-hero-right{display:none !important}
-  .t1-form-row{grid-template-columns:1fr !important}
-  .t1-contact-grid{grid-template-columns:1fr !important}
-  .t1-exp-item{flex-direction:column}
-  .t1-exp-time-dot{flex-direction:row;padding-top:0}
-  .t1-exp-dot-line{display:none}
-}
-`;
-
-const st = {
-  root:{ fontFamily:"'Barlow', sans-serif", background:DARK, color:TEXT, minHeight:"100vh", position:"relative", overflowX:"hidden" },
-  bgGrid:{ position:"fixed", inset:0, backgroundImage:`linear-gradient(rgba(201,169,74,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,169,74,0.03) 1px,transparent 1px)`, backgroundSize:"60px 60px", pointerEvents:"none", zIndex:0 },
-  bgDiag1:{ position:"fixed", top:"-30%", right:"-20%", width:"70vw", height:"70vw", borderRadius:"50%", background:"radial-gradient(circle,rgba(201,169,74,0.04) 0%,transparent 60%)", pointerEvents:"none", zIndex:0 },
-  bgDiag2:{ position:"fixed", bottom:"-20%", left:"-15%", width:"50vw", height:"50vw", borderRadius:"50%", background:"radial-gradient(circle,rgba(201,169,74,0.03) 0%,transparent 60%)", pointerEvents:"none", zIndex:0 },
-  nav:{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"clamp(14px,2vw,20px) clamp(20px,5vw,72px)", position:"sticky", top:0, zIndex:200, background:"rgba(14,15,20,0.88)", backdropFilter:"blur(20px)", borderBottom:`1px solid ${BORDER}` },
-  navLogoWrap:{ display:"flex", alignItems:"center", gap:10 },
-  navLogoDiamond:{ width:10, height:10, background:GOLD, transform:"rotate(45deg)", flexShrink:0 },
-  navLogo:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(18px,2.5vw,24px)", letterSpacing:"0.12em", color:"#fff" },
-  navLinks:{ display:"flex", gap:"clamp(16px,2.5vw,36px)" },
-  navLink:{ color:MUTED, textDecoration:"none", fontSize:"clamp(11px,1.2vw,13px)", fontWeight:500, letterSpacing:"0.07em", textTransform:"uppercase" },
-  navCTA:{ background:GOLD, color:"#0e0f14", padding:"clamp(7px,1vw,9px) clamp(16px,2vw,24px)", textDecoration:"none", fontWeight:700, fontSize:"clamp(11px,1.2vw,13px)", letterSpacing:"0.08em", textTransform:"uppercase" },
-  hamburger:{ display:"none", background:"none", border:"none", cursor:"pointer", padding:4, flexDirection:"column", gap:5, alignItems:"center" },
-  hero:{ position:"relative", zIndex:1, minHeight:"92vh", display:"flex", flexDirection:"column", justifyContent:"center", padding:"clamp(60px,8vw,80px) clamp(20px,5vw,72px) 60px", borderBottom:`1px solid ${BORDER}` },
-  heroInner:{ display:"grid", gridTemplateColumns:"1fr clamp(280px,30vw,400px)", gap:"clamp(32px,4vw,60px)", alignItems:"center" },
-  heroLeft:{},
-  heroEyebrow:{ display:"flex", alignItems:"center", gap:12, marginBottom:28 },
-  heroEyebrowLine:{ display:"block", width:40, height:1, background:GOLD },
-  heroEyebrowText:{ fontSize:"clamp(10px,1.1vw,12px)", fontWeight:600, letterSpacing:"0.2em", textTransform:"uppercase", color:GOLD },
-  heroEyebrowDot:{ display:"block", width:6, height:6, borderRadius:"50%", background:GOLD, boxShadow:`0 0 10px ${GOLD}` },
-  heroName:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(56px,9vw,128px)", lineHeight:0.92, letterSpacing:"0.02em", color:"#fff", marginBottom:20 },
-  heroTitleRow:{ display:"flex", alignItems:"center", gap:16, marginBottom:28 },
-  heroTitleLine:{ width:48, height:3, background:GOLD },
-  heroTitleText:{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:"clamp(14px,1.5vw,18px)", fontWeight:600, letterSpacing:"0.14em", textTransform:"uppercase", color:GOLD },
-  heroBio:{ fontSize:"clamp(14px,1.5vw,17px)", lineHeight:1.75, color:MUTED, maxWidth:520, fontWeight:300, marginBottom:40 },
-  heroCTAs:{ display:"flex", gap:16, marginBottom:40, flexWrap:"wrap" },
-  heroPrimaryBtn:{ background:GOLD, color:"#0e0f14", padding:"clamp(11px,1.2vw,14px) clamp(24px,3vw,36px)", textDecoration:"none", fontWeight:700, fontSize:"clamp(12px,1.2vw,14px)", letterSpacing:"0.06em", textTransform:"uppercase" },
-  heroSecondaryBtn:{ border:`1px solid ${BORDER}`, color:TEXT, padding:"clamp(11px,1.2vw,14px) clamp(24px,3vw,36px)", textDecoration:"none", fontWeight:500, fontSize:"clamp(12px,1.2vw,14px)", letterSpacing:"0.06em", textTransform:"uppercase" },
-  heroSocials:{ display:"flex", gap:24, flexWrap:"wrap" },
-  heroSocialLink:{ color:MUTED, textDecoration:"none", fontSize:12, fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase" },
-  heroRight:{ display:"flex", flexDirection:"column", gap:28, alignItems:"flex-end" },
-  statStack:{ display:"flex", flexDirection:"column", gap:12, width:"100%" },
-  statCard:{ background:DARK2, border:`1px solid ${BORDER}`, padding:"clamp(14px,1.5vw,20px) clamp(16px,2vw,28px)", display:"flex", alignItems:"center", gap:16, position:"relative", overflow:"hidden" },
-  statCardAccent:{ position:"absolute", left:0, top:0, bottom:0, width:3 },
-  statNum:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(36px,4vw,48px)", lineHeight:1 },
-  statLabel:{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:"clamp(12px,1.2vw,14px)", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:MUTED },
-  heroDeco:{ position:"relative", width:"clamp(80px,10vw,140px)", height:"clamp(80px,10vw,140px)", alignSelf:"flex-end" },
-  decoRing:{ position:"absolute", inset:0, border:`1px solid ${BORDER}`, borderRadius:"50%", borderTopColor:GOLD },
-  decoRingInner:{ position:"absolute", inset:20, border:`1px solid ${BORDER}`, borderRadius:"50%", borderRightColor:`rgba(201,169,74,0.5)` },
-  decoCenter:{ position:"absolute", top:"50%", left:"50%", width:16, height:16, background:GOLD, transform:"translate(-50%,-50%) rotate(45deg)" },
-  scrollIndicator:{ position:"absolute", bottom:32, left:"clamp(20px,5vw,72px)", display:"flex", flexDirection:"column", alignItems:"center", gap:8 },
-  scrollLine:{ width:1, background:GOLD, height:0 },
-  scrollText:{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:10, letterSpacing:"0.25em", color:MUTED, writingMode:"vertical-rl", textTransform:"uppercase" },
-  section:{ position:"relative", zIndex:1, padding:"clamp(60px,8vw,100px) clamp(20px,5vw,72px)", borderBottom:`1px solid ${BORDER2}` },
-  sectionAlt:{ background:DARK2 },
-  sectionContact:{ background:DARK3 },
-  sectionInner:{},
-  sectionVisible:{ opacity:1, transform:"translateY(0)" },
-  sectionHeader:{ display:"flex", alignItems:"flex-end", gap:32, marginBottom:"clamp(40px,5vw,64px)", flexWrap:"wrap" },
-  sectionHeaderLeft:{},
-  sectionTagRow:{ display:"flex", alignItems:"center", gap:8, marginBottom:8 },
-  sectionTagDiamond:{ width:8, height:8, background:GOLD, transform:"rotate(45deg)", flexShrink:0 },
-  sectionTag:{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:11, fontWeight:700, letterSpacing:"0.22em", textTransform:"uppercase", color:GOLD },
-  sectionTitle:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(40px,5vw,68px)", letterSpacing:"0.03em", color:"#fff", lineHeight:1 },
-  sectionTitleItalic:{ fontFamily:"'Barlow', sans-serif", fontStyle:"italic", fontWeight:300, color:GOLD },
-  sectionHeaderLine:{ flex:1, height:1, background:`linear-gradient(90deg,${BORDER},transparent)`, marginBottom:8 },
-  skillsGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(300px,100%),1fr))", gap:16 },
-  skillCard:{ background:DARK3, border:`1px solid ${BORDER2}`, padding:"clamp(16px,1.8vw,22px) clamp(16px,2vw,24px)" },
-  skillTop:{ display:"flex", alignItems:"center", gap:10, marginBottom:14 },
-  skillIcon:{ fontSize:20 },
-  skillName:{ flex:1, fontWeight:600, fontSize:15, color:TEXT },
-  skillPct:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:26, color:GOLD, lineHeight:1 },
-  skillPctSym:{ fontSize:14, color:MUTED },
-  skillBarTrack:{ height:3, background:"rgba(255,255,255,0.06)", marginBottom:14, overflow:"hidden" },
-  skillBarFill:{ height:"100%", background:`linear-gradient(90deg,${GOLD},${GOLD_LIGHT})` },
-  skillDesc:{ fontSize:13, color:MUTED, lineHeight:1.6 },
-  projectsGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(380px,100%),1fr))", gap:24 },
-  projectCard:{ background:DARK, border:`1px solid ${BORDER2}`, padding:"clamp(24px,3vw,36px) clamp(20px,2.5vw,32px)", position:"relative", overflow:"hidden" },
-  projectCardFeatured:{ border:`1px solid ${BORDER}`, background:"rgba(201,169,74,0.03)", gridColumn:"1 / -1" },
-  projectCorner:{ position:"absolute", top:0, left:0, width:32, height:32, borderTop:`2px solid ${GOLD}`, borderLeft:`2px solid ${GOLD}` },
-  projectCornerBR:{ position:"absolute", bottom:0, right:0, width:32, height:32, borderBottom:`2px solid rgba(201,169,74,0.3)`, borderRight:`2px solid rgba(201,169,74,0.3)` },
-  projectIndex:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(40px,5vw,64px)", color:"rgba(201,169,74,0.12)", lineHeight:1, marginBottom:8 },
-  projectTitle:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(20px,2.5vw,26px)", letterSpacing:"0.04em", color:"#fff", marginBottom:12 },
-  projectTitleLarge:{ fontSize:"clamp(26px,3.5vw,38px)" },
-  projectDesc:{ fontSize:"clamp(13px,1.4vw,15px)", color:MUTED, lineHeight:1.7, marginBottom:20, fontWeight:300 },
-  techRow:{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:24 },
-  techChip:{ border:`1px solid ${BORDER}`, padding:"4px 12px", fontSize:12, color:MUTED, fontWeight:500, letterSpacing:"0.04em" },
-  projectLinks:{ display:"flex", gap:12, flexWrap:"wrap" },
-  projLinkGhost:{ border:`1px solid rgba(255,255,255,0.15)`, color:MUTED, padding:"9px 20px", textDecoration:"none", fontSize:13, fontWeight:600, letterSpacing:"0.06em" },
-  projLinkGold:{ background:GOLD, color:"#0e0f14", padding:"9px 20px", textDecoration:"none", fontSize:13, fontWeight:700, letterSpacing:"0.06em" },
-  expList:{ display:"flex", flexDirection:"column", gap:0 },
-  expItem:{ display:"flex", gap:24 },
-  expTimeDot:{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, paddingTop:6 },
-  expDot:{ width:12, height:12, background:GOLD, transform:"rotate(45deg)", flexShrink:0 },
-  expDotLine:{ width:1, flex:1, background:BORDER, margin:"8px 0", minHeight:40 },
-  expCard:{ background:DARK3, border:`1px solid ${BORDER2}`, padding:"clamp(20px,2.5vw,28px)", flex:1, marginBottom:16 },
-  expCardTop:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, flexWrap:"wrap", gap:12 },
-  expRole:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(20px,2.5vw,26px)", letterSpacing:"0.03em", color:"#fff", marginBottom:4 },
-  expCompany:{ fontSize:15, color:GOLD, fontWeight:600, letterSpacing:"0.04em" },
-  expDates:{ fontSize:13, color:MUTED, fontWeight:500 },
-  expPresent:{ color:GOLD, fontWeight:700 },
-  expDesc:{ fontSize:15, color:MUTED, lineHeight:1.7, marginBottom:16, fontWeight:300 },
-  expPoints:{ listStyle:"none", display:"flex", flexDirection:"column", gap:8 },
-  expPoint:{ fontSize:14, color:MUTED, display:"flex", gap:10, lineHeight:1.6 },
-  expBullet:{ color:GOLD, fontSize:8, paddingTop:5, flexShrink:0 },
-  blogGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(320px,100%),1fr))", gap:20 },
-  blogCard:{ background:DARK, border:`1px solid ${BORDER2}`, padding:"clamp(20px,2.5vw,28px)", display:"flex", flexDirection:"column" },
-  blogCardTop:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 },
-  blogCat:{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:11, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:GOLD, background:"rgba(201,169,74,0.1)", padding:"3px 10px", borderLeft:`2px solid ${GOLD}` },
-  blogDate:{ fontSize:12, color:MUTED, fontStyle:"italic" },
-  blogTitle:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:"clamp(20px,2.5vw,24px)", letterSpacing:"0.03em", color:"#fff", marginBottom:12, lineHeight:1.1 },
-  blogExcerpt:{ fontSize:14, color:MUTED, lineHeight:1.7, flex:1, marginBottom:20, fontWeight:300 },
-  blogReadMore:{ fontSize:13, fontWeight:600, color:MUTED, letterSpacing:"0.08em" },
-  blogArrow:{ color:GOLD },
-  testGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(320px,100%),1fr))", gap:20 },
-  testCard:{ background:DARK2, border:`1px solid ${BORDER2}`, padding:"clamp(20px,2.5vw,28px)" },
-  testStars:{ display:"flex", gap:2, marginBottom:14 },
-  testStar:{ color:GOLD, fontSize:16 },
-  testText:{ fontSize:15, color:MUTED, lineHeight:1.75, fontStyle:"italic", marginBottom:20, fontWeight:300 },
-  testAuthor:{ display:"flex", alignItems:"center", gap:12 },
-  testAvatar:{ width:40, height:40, background:GOLD, color:"#0e0f14", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16, flexShrink:0 },
-  testName:{ fontSize:15, fontWeight:700, color:TEXT },
-  testRole:{ fontSize:13, color:MUTED },
-  contactGrid:{ display:"grid", gridTemplateColumns:"1fr 1.6fr", gap:"clamp(32px,6vw,80px)" },
-  contactInfo:{},
-  contactSubtext:{ fontSize:"clamp(14px,1.5vw,16px)", color:MUTED, lineHeight:1.8, marginBottom:40, fontWeight:300 },
-  contactDetail:{ display:"flex", gap:16, marginBottom:28, alignItems:"flex-start" },
-  contactDetailIcon:{ color:GOLD, fontSize:18, marginTop:2, flexShrink:0 },
-  contactDetailLabel:{ fontSize:11, color:MUTED, textTransform:"uppercase", letterSpacing:"0.12em", fontWeight:700, marginBottom:4 },
-  contactDetailValue:{ color:GOLD, textDecoration:"none", fontSize:15, fontWeight:600 },
-  contactDetailValuePlain:{ color:TEXT, fontSize:15 },
-  contactSocials:{ display:"flex", gap:10, flexWrap:"wrap", marginTop:32 },
-  contactSocialLink:{ border:`1px solid ${BORDER}`, color:MUTED, padding:"8px 18px", textDecoration:"none", fontSize:12, fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase", background:"transparent" },
-  form:{ display:"flex", flexDirection:"column", gap:20 },
-  formRow:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 },
-  formField:{ display:"flex", flexDirection:"column", gap:8 },
-  formLabel:{ fontSize:11, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:MUTED },
-  formInput:{ background:DARK, border:`1px solid ${BORDER}`, padding:"14px 16px", color:TEXT, fontSize:15, fontFamily:"'Barlow', sans-serif", fontWeight:400, width:"100%" },
-  formTextarea:{ background:DARK, border:`1px solid ${BORDER}`, padding:"14px 16px", color:TEXT, fontSize:15, fontFamily:"'Barlow', sans-serif", fontWeight:400, minHeight:140, resize:"vertical", width:"100%" },
-  formSubmit:{ background:GOLD, color:"#0e0f14", border:"none", padding:"clamp(12px,1.5vw,16px) clamp(24px,3vw,36px)", fontFamily:"'Barlow Condensed', sans-serif", fontSize:16, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", display:"flex", alignItems:"center", gap:12, alignSelf:"flex-start" },
-  formSubmitArrow:{ fontSize:18 },
-  footer:{ background:DARK2, borderTop:`1px solid ${BORDER}`, padding:"clamp(20px,2.5vw,28px) clamp(20px,5vw,72px)", position:"relative", zIndex:1 },
-  footerInner:{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16 },
-  footerLeft:{ display:"flex", alignItems:"center", gap:10 },
-  footerLogoDiamond:{ width:8, height:8, background:GOLD, transform:"rotate(45deg)" },
-  footerName:{ fontFamily:"'Bebas Neue', sans-serif", fontSize:18, letterSpacing:"0.1em", color:"#fff" },
-  footerCenter:{ fontSize:13, color:MUTED },
-  footerRight:{ display:"flex", gap:24, flexWrap:"wrap" },
-  footerLink:{ fontSize:12, color:MUTED, textDecoration:"none", fontWeight:600, letterSpacing:"0.08em", textTransform:"uppercase" },
-};

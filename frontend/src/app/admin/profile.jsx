@@ -6,10 +6,10 @@ import { success, error } from "../../util/toast";
 
 const TEMPLATES = [
   { id: 1, name: "Modern Minimal", preview: "Clean and minimal design with focus on content", icon: "✨" },
-  { id: 2, name: "Creative Portfolio", preview: "Bold colors and creative layout for artists", icon: "🎨" },
-  { id: 3, name: "Corporate Professional", preview: "Professional design for business portfolios", icon: "💼" },
-  { id: 4, name: "Developer Tech", preview: "Tech-focused layout with code snippets", icon: "💻" },
-  { id: 5, name: "Photography Showcase", preview: "Full-width images and gallery layout", icon: "📸" },
+  { id: 2, name: "Modular Dark", preview: "Card-based dashboard layout with dark theme and bento grid", icon: "🧩" },
+  { id: 3, name: "The Broadsheet", preview: "Bold editorial layout with conversion-focused landing page style", icon: " 📰" },
+  { id: 4, name: "Indigo Dev", preview: "Dark-themed developer portfolio with structured sections, animated skills, and project-focused layout", icon: "💻" },
+  { id: 5, name: "Metallic Showcase", preview: "Metallic design with Animated UI", icon: "📸" },
   { id: 6, name: "Interactive Bold", preview: "Dynamic animations and interactive elements", icon: "⚡" },
 ];
 

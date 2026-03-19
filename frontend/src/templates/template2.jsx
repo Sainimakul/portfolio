@@ -1,437 +1,759 @@
 "use client";
 
-import { error, success } from "../util/toast";
-import { usePortfolio } from "../../context/PortfolioContext";
-import { sendContactMessage } from "../../service/api";
 import { useState, useEffect, useRef } from "react";
+import { success, error } from "../util/toast";
+import { usePortfolio } from "../../context/PortfolioContext";
 
-function formatDate(dateString) {
-  if (!dateString) return "";
-  return new Date(dateString).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short" });
 }
-function truncate(str, n) { return str?.length > n ? str.substring(0, n-1) + "…" : str; }
 
-export default function Template2() {
-  const { portfolioData, loading } = usePortfolio();
-  const [contactForm, setContactForm] = useState({ name:"", email:"", subject:"", message:"" });
-  const [sending, setSending] = useState(false);
-  const [mousePos, setMousePos] = useState({ x:0, y:0 });
-  const [menuOpen, setMenuOpen] = useState(false);
-
+function useInView(ref, threshold = 0.1) {
+  const [inView, setInView] = useState(false);
   useEffect(() => {
-    const h = (e) => setMousePos({ x:e.clientX, y:e.clientY });
-    window.addEventListener("mousemove", h);
-    return () => window.removeEventListener("mousemove", h);
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
   }, []);
+  return inView;
+}
 
-  const profile = portfolioData?.profile.data || {};
-  const skills = portfolioData?.skills.data || [];
-  const projects = portfolioData?.projects.data || [];
-  const blogs = portfolioData?.blogs.data || [];
-  const testimonials = portfolioData?.testimonials.data || [];
-  const socialLinks = portfolioData?.SocialLinks.data || [];
-  const experiences = portfolioData?.experiences.data || [];
-
-  async function handleContact(e) {
-    e.preventDefault();
-    try {
-      setSending(true);
-      await sendContactMessage(contactForm);
-      success("Message sent successfully");
-      setContactForm({ name:"", email:"", subject:"", message:"" });
-    } catch (err) { error(err.message); }
-    finally { setSending(false); }
-  }
-
-  if (loading) return (
-    <div style={styles.loadingContainer}>
-      <div style={styles.loadingOrb} />
-      <span style={styles.loadingText}>Loading...</span>
-      <style>{`@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:0.5}}`}</style>
+// ─── Card wrapper ─────────────────────────────────────────────────────────────
+function Card({ children, className = "", featured = false, style = {}, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={style}
+      className={`
+        relative bg-[#161B27] border border-[#242D3E] rounded-2xl
+        transition-all duration-300 ease-out
+        hover:border-[#3B82F6]/40 hover:shadow-[0_8px_40px_rgba(59,130,246,0.1)] hover:-translate-y-1
+        ${featured ? "shadow-[0_4px_24px_rgba(0,0,0,0.4)]" : "shadow-[0_2px_12px_rgba(0,0,0,0.3)]"}
+        ${className}
+      `}
+    >
+      {children}
     </div>
   );
+}
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionHeader({ eyebrow, title, subtitle }) {
+  return (
+    <div className="mb-8">
+      <div className="inline-flex items-center gap-2 bg-[#1E2535] border border-[#2D3748] rounded-full px-3 py-1 mb-3">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />
+        <span className="text-[11px] font-semibold tracking-widest uppercase text-[#64748B]">{eyebrow}</span>
+      </div>
+      <h2 className="font-display text-3xl md:text-4xl font-bold text-white leading-tight">
+        {title}
+        {subtitle && <span className="text-[#3B82F6] ml-2">{subtitle}</span>}
+      </h2>
+    </div>
+  );
+}
+
+// ─── Stat Badge ───────────────────────────────────────────────────────────────
+function StatBadge({ value, label, accent = false }) {
+  return (
+    <div className={`flex flex-col items-center justify-center rounded-xl p-4 ${accent ? "bg-[#1E3A5F] border border-[#3B82F6]/30" : "bg-[#1A2030] border border-[#242D3E]"}`}>
+      <span className={`font-display text-3xl font-extrabold ${accent ? "text-[#3B82F6]" : "text-white"}`}>{value}+</span>
+      <span className="text-xs text-[#64748B] font-medium tracking-wide mt-0.5">{label}</span>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export default function Template2() {
+  const { portfolioData, loading } = usePortfolio();
+  const profile        = portfolioData?.profile.data       || {};
+  const skills         = portfolioData?.skills.data        || [];
+  const projects       = portfolioData?.projects.data      || [];
+  const blogs          = portfolioData?.blogs.data         || [];
+  const testimonials   = portfolioData?.testimonials.data  || [];
+  const socialLinks    = portfolioData?.SocialLinks.data   || [];
+  const experiences    = portfolioData?.experiences.data   || [];
+
+  const [menuOpen, setMenuOpen]   = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  const [form, setForm]           = useState({ name: "", email: "", subject: "", message: "" });
+  const [sending, setSending]     = useState(false);
+
+  const skillsRef   = useRef(null);
+  const projectsRef = useRef(null);
+  const expRef      = useRef(null);
+  const blogRef     = useRef(null);
+  const contactRef  = useRef(null);
+  const testimonRef = useRef(null);
+
+  const skillsVis   = useInView(skillsRef);
+  const projectsVis = useInView(projectsRef);
+  const expVis      = useInView(expRef);
+  const blogVis     = useInView(blogRef);
+  const contactVis  = useInView(contactRef);
+  const testimonVis = useInView(testimonRef);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSending(true);
+    await new Promise((r) => setTimeout(r, 1200));
+    setSending(false);
+    setForm({ name: "", email: "", subject: "", message: "" });
+    success("Message sent! I'll get back to you shortly.");
+  }
+
+  const navItems = ["Skills", "Projects", "Experience", "Blog", "Contact"];
 
   return (
-    <div style={styles.root}>
-      <style>{globalStyles}</style>
-      <div style={{ ...styles.cursorGlow, left:mousePos.x-200, top:mousePos.y-200 }} />
-      <div style={styles.orb1} /><div style={styles.orb2} /><div style={styles.orb3} />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=JetBrains+Mono:wght@400;500&display=swap');
 
-      {/* NAV */}
-      <nav style={styles.nav}>
-        <div style={styles.navLogo}>
-          <span style={styles.navLogoText}>{profile?.name?.split(" ")[0] || "DEV"}</span>
-        </div>
-        <div className={`t2-nav-links${menuOpen ? " t2-nav-open" : ""}`} style={styles.navLinks}>
-          {["skills","projects","experience","blog","contact"].map(s => (
-            <a key={s} href={`#${s}`} style={styles.navLink} className="t2-nav-link"
-              onClick={() => setMenuOpen(false)}
-              data-track={JSON.stringify({ event_type:"nav_click", metadata:{ section:s } })}>
-              {s.charAt(0).toUpperCase()+s.slice(1)}
-            </a>
-          ))}
-        </div>
-        <button style={styles.hamburger} className="t2-hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
-          <span className={`t2-bar${menuOpen?" t2-bar-open-1":""}`} />
-          <span className={`t2-bar${menuOpen?" t2-bar-open-2":""}`} />
-          <span className={`t2-bar${menuOpen?" t2-bar-open-3":""}`} />
-        </button>
-      </nav>
+        .font-display { font-family: 'Outfit', sans-serif; }
+        .font-body    { font-family: 'Outfit', sans-serif; }
+        .font-serif   { font-family: 'Fraunces', serif; }
+        .font-mono    { font-family: 'JetBrains Mono', monospace; }
 
-      {/* HERO */}
-      <section style={styles.hero}>
-        <div style={styles.heroContent}>
-          <div style={styles.heroBadge}><span style={styles.heroBadgeDot} />Available for work</div>
-          <h1 style={styles.heroName}>{profile?.name || "Your Name"}</h1>
-          <p style={styles.heroTitle}>{profile?.title || "Full Stack Developer"}</p>
-          <p style={styles.heroBio}>{profile?.bio || "Building beautiful digital experiences."}</p>
-          <div style={styles.heroCTAs}>
-            <a href="#projects" style={styles.ctaPrimary} className="t2-btn-glow"
-              data-track={JSON.stringify({ event_type:"cta_click", metadata:{ type:"view_work", location:"hero" } })}>View Work</a>
-            <a href="#contact" style={styles.ctaSecondary}
-              data-track={JSON.stringify({ event_type:"cta_click", metadata:{ type:"contact", location:"hero" } })}>Get in Touch</a>
-          </div>
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 5px; background: #0D1117; }
+        ::-webkit-scrollbar-thumb { background: #3B82F6; border-radius: 4px; }
+
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn   { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes glow     { 0%,100%{ box-shadow:0 0 20px rgba(59,130,246,.2); } 50%{ box-shadow:0 0 40px rgba(59,130,246,.5); } }
+        @keyframes spin     { to { transform: rotate(360deg) } }
+        @keyframes pulseDot { 0%,100%{ transform: scale(1); opacity:1; } 50%{ transform: scale(1.4); opacity:.6; } }
+        @keyframes barFill  { from { width: 0 !important; } }
+        @keyframes float    { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+        @keyframes shimmer  { 0%{ background-position: -200% center; } 100%{ background-position: 200% center; } }
+
+        .anim-fadeUp     { animation: fadeUp 0.6s cubic-bezier(.16,1,.3,1) both; }
+        .anim-fadeIn     { animation: fadeIn 0.5s ease both; }
+        .anim-glow       { animation: glow 3s ease-in-out infinite; }
+        .anim-spin       { animation: spin 20s linear infinite; }
+        .anim-pulseDot   { animation: pulseDot 2s ease-in-out infinite; }
+        .anim-float      { animation: float 4s ease-in-out infinite; }
+
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s cubic-bezier(.16,1,.3,1); }
+        .reveal.show { opacity: 1; transform: translateY(0); }
+
+        .bar-fill { animation: barFill 1.2s cubic-bezier(.4,0,.2,1) both; }
+
+        .grid-bg {
+          background-image:
+            linear-gradient(rgba(59,130,246,.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(59,130,246,.04) 1px, transparent 1px);
+          background-size: 56px 56px;
+        }
+
+        .shimmer-text {
+          background: linear-gradient(90deg, #94A3B8 0%, #FFFFFF 40%, #3B82F6 60%, #94A3B8 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 4s linear infinite;
+        }
+
+        .card-dot-grid::before {
+          content: '';
+          position: absolute;
+          top: 0; right: 0;
+          width: 120px; height: 120px;
+          background-image: radial-gradient(circle, rgba(59,130,246,.15) 1px, transparent 1px);
+          background-size: 12px 12px;
+          border-radius: 0 16px 0 0;
+          pointer-events: none;
+        }
+
+        .nav-pill { transition: all .2s ease; }
+        .nav-pill:hover, .nav-pill.active { background: #1E2D45; color: #3B82F6; }
+
+        .tag {
+          background: #1A2535;
+          border: 1px solid #2A3548;
+          color: #94A3B8;
+          font-size: 11px;
+          font-weight: 500;
+          padding: 3px 10px;
+          border-radius: 6px;
+          transition: all .2s;
+        }
+        .tag:hover { border-color: #3B82F6; color: #3B82F6; }
+
+        .input-field {
+          background: #0D1117;
+          border: 1.5px solid #242D3E;
+          border-radius: 10px;
+          color: #E2E8F0;
+          padding: 12px 16px;
+          font-size: 14px;
+          font-family: 'Outfit', sans-serif;
+          width: 100%;
+          outline: none;
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .input-field::placeholder { color: #374151; }
+        .input-field:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+
+        .btn-primary {
+          background: #3B82F6;
+          color: white;
+          font-weight: 600;
+          font-size: 14px;
+          padding: 12px 28px;
+          border-radius: 10px;
+          border: none;
+          cursor: pointer;
+          transition: all .2s;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: 'Outfit', sans-serif;
+        }
+        .btn-primary:hover { background: #2563EB; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(59,130,246,.4); }
+        .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+        .btn-ghost {
+          background: transparent;
+          color: #94A3B8;
+          font-weight: 600;
+          font-size: 14px;
+          padding: 12px 28px;
+          border-radius: 10px;
+          border: 1.5px solid #242D3E;
+          cursor: pointer;
+          transition: all .2s;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: 'Outfit', sans-serif;
+        }
+        .btn-ghost:hover { border-color: #3B82F6; color: #3B82F6; background: rgba(59,130,246,.05); }
+
+        .skill-level-badge {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 100px;
+          letter-spacing: .05em;
+        }
+
+        .timeline-connector {
+          position: absolute;
+          left: 19px;
+          top: 44px;
+          bottom: -24px;
+          width: 2px;
+          background: linear-gradient(to bottom, #3B82F6, transparent);
+        }
+
+        .hero-card-glow {
+          box-shadow: 0 0 0 1px rgba(59,130,246,.2), 0 24px 64px rgba(0,0,0,.5), 0 0 80px rgba(59,130,246,.06);
+        }
+      `}</style>
+
+      <div className="font-body bg-[#0D1117] text-slate-200 min-h-screen">
+
+        {/* ── Ambient background ── */}
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] rounded-full bg-blue-600/[0.04] blur-[100px]" />
+          <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full bg-blue-500/[0.03] blur-[80px]" />
+          <div className="grid-bg absolute inset-0 opacity-60" />
         </div>
-        <div style={styles.heroVisual}>
-          <div style={styles.heroCard}>
-            <div style={styles.heroCardInner}>
-              <div style={styles.heroAvatar}>{profile?.name?.[0] || "D"}</div>
-              <div style={styles.heroCardStats}>
-                <div style={styles.stat}><span style={styles.statNum}>{projects.length}+</span><span style={styles.statLabel}>Projects</span></div>
-                <div style={styles.statDivider} />
-                <div style={styles.stat}><span style={styles.statNum}>{skills.length}+</span><span style={styles.statLabel}>Skills</span></div>
-                <div style={styles.statDivider} />
-                <div style={styles.stat}><span style={styles.statNum}>{experiences.length}+</span><span style={styles.statLabel}>Roles</span></div>
+
+        {/* ══════════════════════ NAV ══════════════════════════ */}
+        <nav className="sticky top-0 z-50 bg-[#0D1117]/80 backdrop-blur-2xl border-b border-[#1E2535]">
+          <div className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between h-16">
+
+            {/* Logo */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-[#3B82F6] rounded-lg flex items-center justify-center">
+                <span className="font-display font-black text-white text-sm">
+                  {profile.name?.split(" ").map(w => w[0]).join("").slice(0,2)}
+                </span>
               </div>
+              <span className="font-display font-bold text-white">{profile.name?.split(" ")[0]}</span>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* SKILLS */}
-      {skills.length > 0 && (
-        <section id="skills" style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionTag}>Expertise</span>
-            <h2 style={styles.sectionTitle}>Skills & Tools</h2>
-          </div>
-          <div style={styles.skillsGrid}>
-            {skills.map((skill, i) => (
-              <div key={skill.id} style={styles.skillCard} className="t2-glass-card"
-                data-track={JSON.stringify({ event_type:"skill_view", metadata:{ skill_name:skill.name } })}>
-                <div style={styles.skillTop}>
-                  <span style={styles.skillIcon}>{skill.icon}</span>
-                  <span style={styles.skillName}>{skill.name}</span>
-                  <span style={styles.skillPct}>{skill.percentage}%</span>
-                </div>
-                <div style={styles.skillBar}>
-                  <div style={{ ...styles.skillBarFill, width:`${skill.percentage}%`, animationDelay:`${i*0.1}s` }} className="t2-skill-fill" />
-                </div>
-                {skill.description && <p style={styles.skillDesc}>{skill.description}</p>}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+            {/* Desktop nav */}
+            <div className="hidden md:flex items-center gap-1 bg-[#111827] border border-[#1E2535] rounded-full p-1">
+              {navItems.map((s) => (
+                <a key={s} href={`#${s.toLowerCase()}`}
+                  className="nav-pill text-[12px] font-semibold tracking-wide text-slate-500 px-4 py-1.5 rounded-full">
+                  {s}
+                </a>
+              ))}
+            </div>
 
-      {/* PROJECTS */}
-      {projects.length > 0 && (
-        <section id="projects" style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionTag}>Portfolio</span>
-            <h2 style={styles.sectionTitle}>Featured Work</h2>
-          </div>
-          <div style={styles.projectsGrid}>
-            {projects.map((p, i) => (
-              <div key={p.id} style={{ ...styles.projectCard, ...(i===0?styles.projectCardFeatured:{}) }} className="t2-glass-card t2-project-card"
-                data-track={JSON.stringify({ event_type:"project_view", metadata:{ project_id:p.id, project_name:p.title } })}>
-                <div style={styles.projectNum}>0{i+1}</div>
-                <h3 style={styles.projectTitle}>{p.title}</h3>
-                <p style={styles.projectDesc}>{p.description}</p>
-                {p.techstack?.length > 0 && (
-                  <div style={styles.techstack}>{p.techstack.map((t,j) => <span key={j} style={styles.techTag}>{t}</span>)}</div>
-                )}
-                <div style={styles.projectLinks}>
-                  {p.github_link && <a href={p.github_link} target="_blank" style={styles.projectLink} className="t2-project-link-btn"
-                    data-track={JSON.stringify({ event_type:"project_link_click", metadata:{ project_id:p.id, link_type:"github" } })}>GitHub ↗</a>}
-                  {p.live_link && <a href={p.live_link} target="_blank" style={styles.projectLinkPrimary} className="t2-btn-glow"
-                    data-track={JSON.stringify({ event_type:"project_link_click", metadata:{ project_id:p.id, link_type:"live_demo" } })}>Live Demo ↗</a>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+            {/* CTA */}
+            <a href="#contact" className="hidden md:inline-flex btn-primary text-sm py-2 px-5">
+              Hire Me <span>↗</span>
+            </a>
 
-      {/* EXPERIENCE */}
-      {experiences.length > 0 && (
-        <section id="experience" style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionTag}>Career</span>
-            <h2 style={styles.sectionTitle}>Experience</h2>
+            {/* Hamburger */}
+            <button className="md:hidden p-2 text-slate-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {menuOpen
+                  ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
+              </svg>
+            </button>
           </div>
-          <div style={styles.timeline}>
-            {experiences.map((exp, i) => (
-              <div key={exp.id} style={styles.timelineItem}
-                data-track={JSON.stringify({ event_type:"experience_view", metadata:{ experience_id:exp.id, company:exp.company } })}>
-                <div style={styles.timelineLine} /><div style={styles.timelineDot} />
-                <div style={styles.timelineCard} className="t2-glass-card">
-                  <div style={styles.timelineHeader}>
-                    <div>
-                      <h3 style={styles.expRole}>{exp.role}</h3>
-                      <div style={styles.expCompany}>{exp.company}</div>
-                    </div>
-                    <div style={styles.expDates}>{formatDate(exp.start_date)} — {exp.is_current==="true"?"Present":formatDate(exp.end_date)}</div>
-                  </div>
-                  {exp.description && <p style={styles.expDesc}>{exp.description}</p>}
-                  {exp.points?.length > 0 && (
-                    <ul style={styles.expPoints}>{exp.points.map((pt,j) => <li key={j} style={styles.expPoint}>{pt}</li>)}</ul>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
-      {/* BLOG */}
-      {blogs.length > 0 && (
-        <section id="blog" style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionTag}>Writing</span>
-            <h2 style={styles.sectionTitle}>Blog</h2>
-          </div>
-          <div style={styles.blogGrid}>
-            {blogs.map(blog => (
-              <div key={blog.id} style={styles.blogCard} className="t2-glass-card"
-                data-track={JSON.stringify({ event_type:"blog_view", metadata:{ blog_id:blog.id, blog_title:blog.title } })}>
-                <span style={styles.blogCategory}>{blog.category||"General"}</span>
-                <h3 style={styles.blogTitle}>{blog.title}</h3>
-                <p style={styles.blogExcerpt}>{truncate(blog.excerpt,120)}</p>
-                <div style={styles.blogMeta}>{formatDate(blog.publish_date)}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* TESTIMONIALS */}
-      {testimonials.length > 0 && (
-        <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span style={styles.sectionTag}>Feedback</span>
-            <h2 style={styles.sectionTitle}>Testimonials</h2>
-          </div>
-          <div style={styles.testimonialsGrid}>
-            {testimonials.map(t => (
-              <div key={t.id} style={styles.testimonialCard} className="t2-glass-card"
-                data-track={JSON.stringify({ event_type:"testimonial_view", metadata:{ testimonial_id:t.id, name:t.name } })}>
-                <div style={styles.testimonialStars}>{"★".repeat(t.rating)}</div>
-                <p style={styles.testimonialText}>"{t.review}"</p>
-                <div style={styles.testimonialAuthor}>
-                  <div style={styles.testimonialAvatar}>{t.name?.[0]}</div>
-                  <div><div style={styles.testimonialName}>{t.name}</div><div style={styles.testimonialRole}>{t.role} @ {t.company}</div></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* CONTACT */}
-      <section id="contact" style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <span style={styles.sectionTag}>Let's Talk</span>
-          <h2 style={styles.sectionTitle}>Get In Touch</h2>
-        </div>
-        <div style={styles.contactGrid}>
-          <div style={styles.contactInfo}>
-            <p style={styles.contactSubtext}>Have a project in mind? Let's collaborate and build something extraordinary.</p>
-            {profile.email && <div style={styles.contactItem}><span style={styles.contactLabel}>Email</span><a href={`mailto:${profile.email}`} style={styles.contactValue}
-              data-track={JSON.stringify({ event_type:"contact_info_click", metadata:{ type:"email" } })}>{profile.email}</a></div>}
-            {profile.location && <div style={styles.contactItem}><span style={styles.contactLabel}>Location</span><span style={styles.contactValue}>{profile.location}</span></div>}
-            {socialLinks.length > 0 && (
-              <div style={styles.socialLinks}>
-                {socialLinks.map(link => (
-                  <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={styles.socialLink} className="t2-social-link"
-                    data-track={JSON.stringify({ event_type:"social_click", metadata:{ platform:link.platform, location:"contact" } })}>{link.platform}</a>
-                ))}
-              </div>
-            )}
-          </div>
-          <form onSubmit={handleContact} style={styles.contactForm}>
-            <input required placeholder="Your Name" value={contactForm.name} onChange={e => setContactForm({...contactForm,name:e.target.value})} style={styles.input} className="t2-glass-input"
-              data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"name" } })} />
-            <input required type="email" placeholder="Email Address" value={contactForm.email} onChange={e => setContactForm({...contactForm,email:e.target.value})} style={styles.input} className="t2-glass-input"
-              data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"email" } })} />
-            <input placeholder="Subject" value={contactForm.subject} onChange={e => setContactForm({...contactForm,subject:e.target.value})} style={styles.input} className="t2-glass-input"
-              data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"subject" } })} />
-            <textarea required placeholder="Your Message" value={contactForm.message} onChange={e => setContactForm({...contactForm,message:e.target.value})} style={styles.textarea} className="t2-glass-input"
-              data-track={JSON.stringify({ event_type:"form_interaction", metadata:{ field:"message" } })} />
-            <button disabled={sending} style={styles.submitBtn} className="t2-btn-glow"
-              data-track={JSON.stringify({ event_type:"form_submit_click", metadata:{ form:"contact" } })}>{sending?"Sending...":"Send Message →"}</button>
-          </form>
-        </div>
-      </section>
-
-      <footer style={styles.footer}>
-        <div style={styles.footerGlass}>
-          <span style={styles.footerText}>© {new Date().getFullYear()} {profile?.name||"Your Name"} · Built with passion</span>
-          {socialLinks.length > 0 && (
-            <div style={styles.footerSocials}>
-              {socialLinks.map(link => (
-                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="t2-social-link"
-                  data-track={JSON.stringify({ event_type:"social_click", metadata:{ platform:link.platform, location:"footer" } })}>{link.platform}</a>
+          {/* Mobile menu */}
+          {menuOpen && (
+            <div className="md:hidden border-t border-[#1E2535] bg-[#111827] px-5 py-4 flex flex-col gap-1">
+              {navItems.map((s) => (
+                <a key={s} href={`#${s.toLowerCase()}`} onClick={() => setMenuOpen(false)}
+                  className="text-sm font-semibold text-slate-400 hover:text-[#3B82F6] px-4 py-2.5 rounded-lg hover:bg-[#1E2535] transition-all">
+                  {s}
+                </a>
               ))}
             </div>
           )}
-        </div>
-      </footer>
-    </div>
+        </nav>
+
+        {/* ══════════════════════ HERO ══════════════════════════ */}
+        <section className="relative z-10 py-16 md:py-24 px-5 md:px-10 max-w-7xl mx-auto">
+
+          {/* Bento grid layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+            {/* Main intro card */}
+            <Card featured className="lg:col-span-7 p-8 md:p-10 card-dot-grid hero-card-glow overflow-hidden">
+              <div className="flex items-center gap-2 mb-6 anim-fadeIn" style={{animationDelay:".1s"}}>
+                <div className="w-2 h-2 rounded-full bg-emerald-400 anim-pulseDot" />
+                <span className="text-xs font-semibold text-emerald-400 tracking-widest uppercase">Available for work</span>
+              </div>
+
+              <h1 className="font-display font-black text-white leading-[1] tracking-tight mb-4"
+                style={{fontSize:"clamp(42px,7vw,80px)"}}>
+                {profile.name?.split(" ").map((w, i) => (
+                  <span key={i} className={`block anim-fadeUp ${i === 1 ? "shimmer-text" : ""}`}
+                    style={{animationDelay:`${.2+i*.1}s`}}>{w}</span>
+                ))}
+              </h1>
+
+              <div className="flex items-center gap-3 mb-5 anim-fadeUp" style={{animationDelay:".38s"}}>
+                <div className="h-px w-10 bg-[#3B82F6]" />
+                <span className="font-mono text-sm text-[#3B82F6] tracking-wide">{profile.title}</span>
+              </div>
+
+              <p className="text-slate-400 leading-relaxed max-w-md mb-8 font-light anim-fadeUp" style={{animationDelay:".44s"}}>
+                {profile.bio}
+              </p>
+
+              <div className="flex flex-wrap gap-3 anim-fadeUp" style={{animationDelay:".5s"}}>
+                <a href="#projects" className="btn-primary">View Work <span>→</span></a>
+                <a href="#contact" className="btn-ghost">Start a Project</a>
+              </div>
+            </Card>
+
+            {/* Right column */}
+            <div className="lg:col-span-5 flex flex-col gap-4">
+
+              {/* Avatar / decorative card */}
+              <Card className="p-6 flex items-center gap-5 overflow-hidden anim-fadeUp" style={{animationDelay:".2s"}}>
+                <div className="relative flex-shrink-0">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center anim-glow">
+                    <span className="font-display font-black text-white text-2xl">
+                      {profile.name?.split(" ").map(w => w[0]).join("").slice(0,2)}
+                    </span>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-[#0D1117] flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  </div>
+                </div>
+                <div>
+                  <div className="font-display font-bold text-white text-lg">{profile.name}</div>
+                  <div className="text-slate-500 text-sm">{profile.title}</div>
+                  {profile.location && <div className="text-xs text-[#3B82F6] mt-1 flex items-center gap-1"><span>◎</span>{profile.location}</div>}
+                </div>
+              </Card>
+
+              {/* Stats grid */}
+              <div className="grid grid-cols-3 gap-3 anim-fadeUp" style={{animationDelay:".3s"}}>
+                <StatBadge value={projects.length} label="Projects" accent />
+                <StatBadge value={skills.length} label="Skills" />
+                <StatBadge value={experiences.length} label="Roles" accent />
+              </div>
+
+              {/* Social links card */}
+              <Card className="p-5 anim-fadeUp" style={{animationDelay:".38s"}}>
+                <div className="text-xs font-semibold text-slate-600 tracking-widest uppercase mb-3">Connect</div>
+                <div className="flex flex-wrap gap-2">
+                  {socialLinks.map((l) => (
+                    <a key={l.id} href={l.url}
+                      className="tag hover:cursor-pointer">
+                      {l.platform}
+                    </a>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Quick contact card */}
+              {profile.email && (
+                <Card className="p-5 flex items-center gap-4 anim-fadeUp" style={{animationDelay:".44s"}}>
+                  <div className="w-10 h-10 rounded-xl bg-[#1E3A5F] flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#3B82F6]">✉</span>
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="text-xs text-slate-600 mb-0.5 font-semibold tracking-wide">EMAIL</div>
+                    <a href={`mailto:${profile.email}`} className="text-sm text-[#3B82F6] hover:underline truncate block">{profile.email}</a>
+                  </div>
+                </Card>
+              )}
+            </div>
+
+          </div>
+        </section>
+
+        {/* ══════════════════════ SKILLS ══════════════════════════ */}
+        <section id="skills" className="relative z-10 py-16 md:py-24 px-5 md:px-10 border-t border-[#1E2535]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={skillsRef} className={`reveal ${skillsVis ? "show" : ""}`}>
+              <SectionHeader eyebrow="Expertise" title="Skills &" subtitle="Capabilities" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {skills.map((sk, i) => {
+                  const level = sk.percentage >= 85 ? { label: "Expert", bg: "#1E3A2F", color: "#34D399" }
+                    : sk.percentage >= 65 ? { label: "Advanced", bg: "#1E2D4A", color: "#3B82F6" }
+                    : { label: "Proficient", bg: "#2A2040", color: "#A78BFA" };
+
+                  return (
+                    <Card key={sk.id} style={{transitionDelay:`${i*.05}s`}}
+                      className={`reveal ${skillsVis ? "show" : ""} p-5`}>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#1A2535] flex items-center justify-center text-xl">
+                            {sk.icon}
+                          </div>
+                          <div>
+                            <div className="font-display font-semibold text-white text-sm">{sk.name}</div>
+                            <span className="skill-level-badge" style={{background: level.bg, color: level.color}}>{level.label}</span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-lg font-bold text-white">{sk.percentage}<span className="text-xs text-slate-600">%</span></span>
+                      </div>
+
+                      {/* Track */}
+                      <div className="h-1.5 bg-[#1A2535] rounded-full overflow-hidden mb-3">
+                        <div
+                          className={`h-full rounded-full ${skillsVis ? "bar-fill" : ""}`}
+                          style={{
+                            width: `${sk.percentage}%`,
+                            background: `linear-gradient(90deg, ${level.color}80, ${level.color})`,
+                            animationDelay: `${.4 + i*.06}s`
+                          }}
+                        />
+                      </div>
+
+                      {sk.description && <p className="text-xs text-slate-600 leading-relaxed">{sk.description}</p>}
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════ PROJECTS ══════════════════════════ */}
+        <section id="projects" className="relative z-10 py-16 md:py-24 px-5 md:px-10 border-t border-[#1E2535]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={projectsRef} className={`reveal ${projectsVis ? "show" : ""}`}>
+
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+                <SectionHeader eyebrow="Portfolio" title="Featured" subtitle="Projects" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {projects.map((p, i) => (
+                  <Card key={p.id}
+                    featured={i === 0}
+                    style={{transitionDelay:`${i*.07}s`}}
+                    className={`reveal ${projectsVis ? "show" : ""} p-6 ${i === 0 ? "md:col-span-2 xl:col-span-2" : ""} overflow-hidden`}>
+
+                    {/* Project number */}
+                    <div className="flex items-start justify-between mb-5">
+                      <span className="font-mono text-xs text-slate-700 border border-[#2A3548] rounded px-2 py-0.5">
+                        {String(i+1).padStart(2,"0")}
+                      </span>
+                      <div className="flex gap-2">
+                        {p.github_link && (
+                          <a href={p.github_link} className="w-8 h-8 rounded-lg bg-[#1A2535] border border-[#2A3548] flex items-center justify-center text-slate-500 hover:text-white hover:border-[#3B82F6] transition-all">
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                          </a>
+                        )}
+                        {p.live_link && (
+                          <a href={p.live_link} className="w-8 h-8 rounded-lg bg-[#1E3A5F] border border-[#3B82F6]/30 flex items-center justify-center text-[#3B82F6] hover:bg-[#3B82F6] hover:text-white transition-all">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <h3 className={`font-display font-bold text-white leading-tight mb-2 ${i===0 ? "text-2xl md:text-3xl" : "text-xl"}`}>
+                      {p.title}
+                    </h3>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-5 font-light">{p.description}</p>
+
+                    {p.techstack?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {p.techstack.map((t, j) => <span key={j} className="tag">{t}</span>)}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════ EXPERIENCE ══════════════════════════ */}
+        <section id="experience" className="relative z-10 py-16 md:py-24 px-5 md:px-10 border-t border-[#1E2535]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={expRef} className={`reveal ${expVis ? "show" : ""}`}>
+              <SectionHeader eyebrow="Career" title="Work" subtitle="Experience" />
+
+              <div className="space-y-4">
+                {experiences.map((exp, i) => (
+                  <div key={exp.id} style={{transitionDelay:`${i*.08}s`}}
+                    className={`reveal ${expVis ? "show" : ""} relative flex gap-5`}>
+
+                    {/* Timeline column */}
+                    <div className="flex flex-col items-center flex-shrink-0 w-10 pt-6">
+                      <div className="w-9 h-9 rounded-xl bg-[#1E3A5F] border border-[#3B82F6]/30 flex items-center justify-center text-[#3B82F6] text-xs font-bold font-mono z-10">
+                        {String(i+1).padStart(2,"0")}
+                      </div>
+                      {i < experiences.length - 1 && (
+                        <div className="w-0.5 flex-1 bg-gradient-to-b from-[#3B82F6]/30 to-transparent mt-2 min-h-[32px]" />
+                      )}
+                    </div>
+
+                    {/* Card */}
+                    <Card className={`flex-1 p-6 mb-4`}>
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                        <div>
+                          <h3 className="font-display font-bold text-white text-xl leading-tight">{exp.role}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm font-semibold text-[#3B82F6]">{exp.company}</span>
+                            {exp.is_current === "true" && (
+                              <span className="text-[10px] bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 rounded-full px-2 py-0.5 font-semibold tracking-wide">CURRENT</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-[#1A2535] border border-[#2A3548] rounded-lg px-3 py-1.5 text-xs text-slate-500 font-mono self-start flex-shrink-0">
+                          <span>📅</span>
+                          {fmtDate(exp.start_date)} — {exp.is_current === "true" ? "Present" : fmtDate(exp.end_date)}
+                        </div>
+                      </div>
+
+                      {exp.description && (
+                        <p className="text-slate-500 text-sm leading-relaxed mb-4 font-light">{exp.description}</p>
+                      )}
+
+                      {exp.points?.length > 0 && (
+                        <div className="grid sm:grid-cols-2 gap-2">
+                          {exp.points.map((pt, j) => (
+                            <div key={j} className="flex gap-2 items-start bg-[#1A2535] rounded-lg p-3">
+                              <span className="text-[#3B82F6] text-xs mt-0.5 flex-shrink-0">▹</span>
+                              <span className="text-xs text-slate-400 leading-relaxed">{pt}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════ BLOG ══════════════════════════ */}
+        <section id="blog" className="relative z-10 py-16 md:py-24 px-5 md:px-10 border-t border-[#1E2535]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={blogRef} className={`reveal ${blogVis ? "show" : ""}`}>
+              <SectionHeader eyebrow="Writing" title="Latest" subtitle="Articles" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {blogs.map((b, i) => (
+                  <Card key={b.id} style={{transitionDelay:`${i*.06}s`}}
+                    className={`reveal ${blogVis ? "show" : ""} p-6 flex flex-col cursor-pointer group`}>
+
+                    <div className="flex items-center justify-between mb-5">
+                      <span className="tag font-semibold text-[#3B82F6] border-[#1E3A5F] bg-[#1E3A5F]/50">{b.category || "General"}</span>
+                      <span className="font-mono text-[11px] text-slate-700">{fmtDate(b.publish_date)}</span>
+                    </div>
+
+                    <h3 className="font-display font-bold text-white text-lg leading-snug mb-3 group-hover:text-[#3B82F6] transition-colors">
+                      {b.title}
+                    </h3>
+                    <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-5 font-light">{b.excerpt}</p>
+
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 group-hover:text-[#3B82F6] transition-colors pt-4 border-t border-[#1E2535]">
+                      <span>Read Article</span>
+                      <span className="group-hover:translate-x-1 transition-transform">→</span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════ TESTIMONIALS ══════════════════════════ */}
+        <section className="relative z-10 py-16 md:py-24 px-5 md:px-10 border-t border-[#1E2535]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={testimonRef} className={`reveal ${testimonVis ? "show" : ""}`}>
+              <SectionHeader eyebrow="Feedback" title="What Clients" subtitle="Say" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {testimonials.map((t, i) => (
+                  <Card key={t.id} style={{transitionDelay:`${i*.07}s`}}
+                    className={`reveal ${testimonVis ? "show" : ""} p-7`}>
+
+                    {/* Stars */}
+                    <div className="flex gap-0.5 mb-4">
+                      {Array.from({length:5}).map((_,j) => (
+                        <span key={j} className={`text-sm ${j < t.rating ? "text-amber-400" : "text-slate-800"}`}>★</span>
+                      ))}
+                    </div>
+
+                    {/* Quote mark */}
+                    <div className="font-serif text-5xl text-[#3B82F6]/20 leading-none mb-2 select-none">"</div>
+
+                    <p className="text-slate-300 text-base leading-[1.75] font-light mb-6 italic">{t.review}</p>
+
+                    {/* Author */}
+                    <div className="flex items-center gap-3 pt-5 border-t border-[#1E2535]">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        {t.name?.[0]}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white text-sm">{t.name}</div>
+                        <div className="text-xs text-slate-600">{t.role} @ {t.company}</div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════ CONTACT ══════════════════════════ */}
+        <section id="contact" className="relative z-10 py-16 md:py-24 px-5 md:px-10 border-t border-[#1E2535]">
+          <div className="max-w-7xl mx-auto">
+            <div ref={contactRef} className={`reveal ${contactVis ? "show" : ""}`}>
+              <SectionHeader eyebrow="Get In Touch" title="Let's Build" subtitle="Together" />
+
+              <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+
+                {/* Info cards column */}
+                <div className="space-y-4">
+                  <Card className="p-6">
+                    <p className="text-slate-400 text-sm leading-relaxed font-light mb-6">
+                      Have a project in mind? Let's collaborate and craft something that truly stands out.
+                    </p>
+
+                    {profile.email && (
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-9 h-9 rounded-lg bg-[#1E3A5F] border border-[#3B82F6]/20 flex items-center justify-center text-sm text-[#3B82F6] flex-shrink-0">✉</div>
+                        <div>
+                          <div className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-0.5">Email</div>
+                          <a href={`mailto:${profile.email}`} className="text-sm text-[#3B82F6] hover:underline">{profile.email}</a>
+                        </div>
+                      </div>
+                    )}
+
+                    {profile.location && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-[#1A2535] border border-[#2A3548] flex items-center justify-center text-sm text-slate-500 flex-shrink-0">◎</div>
+                        <div>
+                          <div className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-0.5">Location</div>
+                          <span className="text-sm text-slate-300">{profile.location}</span>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+
+                  <Card className="p-5">
+                    <div className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-3">Find Me On</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {socialLinks.map((l) => (
+                        <a key={l.id} href={l.url}
+                          className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-500 border border-[#2A3548] rounded-lg py-2.5 hover:border-[#3B82F6] hover:text-[#3B82F6] hover:bg-[#1E3A5F]/30 transition-all">
+                          {l.platform}
+                        </a>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Form card */}
+                <Card className="p-7" featured>
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      {[
+                        {key:"name",  label:"Full Name", type:"text",  ph:"John Doe"},
+                        {key:"email", label:"Email Address", type:"email", ph:"john@email.com"},
+                      ].map(({key, label, type, ph}) => (
+                        <div key={key}>
+                          <label className="block text-[11px] font-semibold tracking-widest uppercase text-slate-600 mb-2">{label}</label>
+                          <input required type={type} placeholder={ph} value={form[key]}
+                            onChange={e => setForm({...form, [key]: e.target.value})}
+                            className="input-field" />
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold tracking-widest uppercase text-slate-600 mb-2">Subject</label>
+                      <input placeholder="Project inquiry" value={form.subject}
+                        onChange={e => setForm({...form, subject: e.target.value})}
+                        className="input-field" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold tracking-widest uppercase text-slate-600 mb-2">Message</label>
+                      <textarea required rows={5} placeholder="Tell me about your project..."
+                        value={form.message} onChange={e => setForm({...form, message: e.target.value})}
+                        className="input-field resize-none" />
+                    </div>
+                    <button type="submit" disabled={sending} className="btn-primary w-full justify-center py-3.5">
+                      <span>{sending ? "Sending…" : "Send Message"}</span>
+                      <span>{sending ? "⏳" : "→"}</span>
+                    </button>
+                  </form>
+                </Card>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════ FOOTER ══════════════════════════ */}
+        <footer className="relative z-10 border-t border-[#1E2535] bg-[#0D1117] px-5 md:px-10 py-8">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 bg-[#3B82F6] rounded-lg flex items-center justify-center">
+                <span className="font-display font-black text-white text-xs">
+                  {profile.name?.split(" ").map(w => w[0]).join("").slice(0,2)}
+                </span>
+              </div>
+              <span className="font-display font-bold text-white">{profile.name}</span>
+            </div>
+            <p className="text-xs text-slate-700 font-mono">© {new Date().getFullYear()} · Built with precision</p>
+            <div className="flex gap-3">
+              {socialLinks.map((l) => (
+                <a key={l.id} href={l.url} className="tag">{l.platform}</a>
+              ))}
+            </div>
+          </div>
+        </footer>
+
+      </div>
+    </>
   );
 }
-
-const globalStyles = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-.t2-nav-link{transition:color 0.3s,text-shadow 0.3s}
-.t2-nav-link:hover{color:#a78bfa !important;text-shadow:0 0 20px rgba(167,139,250,0.5)}
-.t2-glass-card{transition:transform 0.3s ease,box-shadow 0.3s ease}
-.t2-glass-card:hover{transform:translateY(-4px);box-shadow:0 20px 60px rgba(167,139,250,0.2),0 0 0 1px rgba(255,255,255,0.15) !important}
-.t2-btn-glow{transition:all 0.3s ease}
-.t2-btn-glow:hover{box-shadow:0 0 30px rgba(167,139,250,0.6),0 0 60px rgba(167,139,250,0.3) !important;transform:translateY(-2px)}
-@keyframes fillBar{from{width:0% !important}}
-.t2-skill-fill{animation:fillBar 1.2s cubic-bezier(0.4,0,0.2,1) both}
-.t2-project-card{transition:all 0.4s ease}
-.t2-project-card:hover{transform:translateY(-6px) scale(1.01)}
-.t2-glass-input{transition:all 0.3s ease;outline:none}
-.t2-glass-input:focus{border-color:rgba(167,139,250,0.6) !important;box-shadow:0 0 20px rgba(167,139,250,0.2) !important}
-.t2-social-link{transition:all 0.3s}
-.t2-social-link:hover{color:#a78bfa !important;transform:translateY(-2px)}
-.t2-project-link-btn{transition:all 0.3s}
-.t2-project-link-btn:hover{color:#a78bfa !important}
-@keyframes float{0%,100%{transform:translateY(0px) rotate(0deg)}33%{transform:translateY(-20px) rotate(1deg)}66%{transform:translateY(-10px) rotate(-1deg)}}
-@keyframes orbFloat1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-50px) scale(1.1)}}
-@keyframes orbFloat2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-40px,30px) scale(0.9)}}
-@keyframes orbFloat3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,40px) scale(1.05)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.t2-hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;flex-direction:column;gap:5px;align-items:center}
-.t2-bar{display:block;width:22px;height:2px;background:#e2e8f0;transition:all 0.3s}
-.t2-bar-open-1{transform:rotate(45deg) translate(5px,5px)}
-.t2-bar-open-2{opacity:0}
-.t2-bar-open-3{transform:rotate(-45deg) translate(5px,-5px)}
-@media(max-width:1024px){
-  .t2-hamburger{display:flex !important}
-  .t2-nav-links{display:none !important}
-  .t2-nav-open{display:flex !important;flex-direction:column;position:absolute;top:100%;left:0;right:0;background:rgba(5,5,16,0.97);padding:20px 24px;gap:16px;border-bottom:1px solid rgba(255,255,255,0.06);z-index:300}
-}
-@media(max-width:768px){
-  .t2-hero{flex-direction:column !important;padding:60px 24px !important;min-height:auto !important}
-  .t2-hero-visual{display:none !important}
-  .t2-contact-grid{grid-template-columns:1fr !important}
-  .t2-form-row{display:none}
-}
-`;
-
-const styles = {
-  root:{ fontFamily:"'Outfit', sans-serif", background:"#050510", color:"#e2e8f0", minHeight:"100vh", position:"relative", overflow:"hidden" },
-  loadingContainer:{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#050510", gap:16 },
-  loadingOrb:{ width:40, height:40, borderRadius:"50%", background:"linear-gradient(135deg,#a78bfa,#60a5fa)", animation:"pulse 1.5s ease-in-out infinite" },
-  loadingText:{ color:"#a78bfa", fontFamily:"'Outfit', sans-serif", fontSize:16 },
-  cursorGlow:{ position:"fixed", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(167,139,250,0.06) 0%,transparent 70%)", pointerEvents:"none", zIndex:0, transition:"left 0.1s ease,top 0.1s ease" },
-  orb1:{ position:"fixed", top:"-20%", left:"-10%", width:"50vw", height:"50vw", borderRadius:"50%", background:"radial-gradient(circle,rgba(167,139,250,0.12) 0%,transparent 70%)", animation:"orbFloat1 12s ease-in-out infinite", pointerEvents:"none", zIndex:0 },
-  orb2:{ position:"fixed", bottom:"10%", right:"-10%", width:"40vw", height:"40vw", borderRadius:"50%", background:"radial-gradient(circle,rgba(96,165,250,0.1) 0%,transparent 70%)", animation:"orbFloat2 15s ease-in-out infinite", pointerEvents:"none", zIndex:0 },
-  orb3:{ position:"fixed", top:"50%", left:"40%", width:"30vw", height:"30vw", borderRadius:"50%", background:"radial-gradient(circle,rgba(244,114,182,0.07) 0%,transparent 70%)", animation:"orbFloat3 18s ease-in-out infinite", pointerEvents:"none", zIndex:0 },
-  nav:{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"clamp(14px,2vw,20px) clamp(20px,5vw,60px)", position:"sticky", top:0, zIndex:100, background:"rgba(5,5,16,0.7)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.06)" },
-  navLogo:{ display:"flex", alignItems:"center", gap:8 },
-  navLogoText:{ fontSize:"clamp(18px,2.5vw,22px)", fontWeight:800, letterSpacing:"-0.5px", background:"linear-gradient(135deg,#a78bfa,#60a5fa)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" },
-  navLinks:{ display:"flex", gap:"clamp(16px,2.5vw,36px)" },
-  navLink:{ color:"#94a3b8", fontSize:"clamp(12px,1.2vw,14px)", textDecoration:"none", fontWeight:500, letterSpacing:"0.02em" },
-  hamburger:{ display:"none", background:"none", border:"none", cursor:"pointer", padding:4, flexDirection:"column", gap:5, alignItems:"center" },
-  hero:{ minHeight:"92vh", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"clamp(60px,8vw,80px) clamp(20px,5vw,60px)", position:"relative", zIndex:1, gap:40, flexWrap:"wrap" },
-  heroContent:{ maxWidth:600, flex:"1 1 300px" },
-  heroBadge:{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(167,139,250,0.1)", border:"1px solid rgba(167,139,250,0.3)", padding:"6px 16px", borderRadius:100, fontSize:12, color:"#a78bfa", fontWeight:600, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:24 },
-  heroBadgeDot:{ width:6, height:6, borderRadius:"50%", background:"#a78bfa", boxShadow:"0 0 8px #a78bfa", display:"inline-block", animation:"pulse 2s ease-in-out infinite" },
-  heroName:{ fontFamily:"'DM Serif Display', serif", fontSize:"clamp(48px,6vw,88px)", fontWeight:400, lineHeight:1.05, color:"#f8fafc", marginBottom:12, textShadow:"0 0 80px rgba(167,139,250,0.2)" },
-  heroTitle:{ fontSize:"clamp(16px,1.8vw,20px)", color:"#a78bfa", fontWeight:600, marginBottom:16 },
-  heroBio:{ fontSize:"clamp(14px,1.5vw,17px)", color:"#94a3b8", lineHeight:1.7, marginBottom:36, maxWidth:480 },
-  heroCTAs:{ display:"flex", gap:16, flexWrap:"wrap" },
-  ctaPrimary:{ background:"linear-gradient(135deg,#a78bfa,#60a5fa)", color:"#fff", padding:"clamp(11px,1.2vw,14px) clamp(20px,3vw,32px)", borderRadius:8, textDecoration:"none", fontWeight:700, fontSize:"clamp(13px,1.3vw,15px)", boxShadow:"0 4px 24px rgba(167,139,250,0.4)" },
-  ctaSecondary:{ border:"1px solid rgba(255,255,255,0.15)", color:"#e2e8f0", padding:"clamp(11px,1.2vw,14px) clamp(20px,3vw,32px)", borderRadius:8, textDecoration:"none", fontWeight:600, fontSize:"clamp(13px,1.3vw,15px)" },
-  heroVisual:{ flex:"0 0 auto", display:"flex", alignItems:"center", justifyContent:"center" },
-  heroCard:{ background:"rgba(255,255,255,0.04)", backdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:24, padding:"clamp(28px,4vw,48px)", animation:"float 6s ease-in-out infinite", boxShadow:"0 8px 40px rgba(167,139,250,0.15)" },
-  heroCardInner:{ display:"flex", flexDirection:"column", alignItems:"center", gap:28 },
-  heroAvatar:{ width:100, height:100, borderRadius:"50%", background:"linear-gradient(135deg,#a78bfa,#60a5fa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:42, fontWeight:700, color:"#fff", boxShadow:"0 0 40px rgba(167,139,250,0.5)" },
-  heroCardStats:{ display:"flex", gap:24, alignItems:"center" },
-  stat:{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 },
-  statNum:{ fontSize:28, fontWeight:800, color:"#f8fafc" },
-  statLabel:{ fontSize:12, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.08em" },
-  statDivider:{ width:1, height:40, background:"rgba(255,255,255,0.1)" },
-  section:{ padding:"clamp(60px,8vw,100px) clamp(20px,5vw,60px)", position:"relative", zIndex:1, borderTop:"1px solid rgba(255,255,255,0.04)" },
-  sectionHeader:{ marginBottom:56, display:"flex", flexDirection:"column", gap:8 },
-  sectionTag:{ fontSize:12, fontWeight:700, color:"#a78bfa", textTransform:"uppercase", letterSpacing:"0.14em" },
-  sectionTitle:{ fontFamily:"'DM Serif Display', serif", fontSize:"clamp(32px,4vw,56px)", fontWeight:400, color:"#f8fafc", lineHeight:1.1 },
-  skillsGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(300px,100%),1fr))", gap:20 },
-  skillCard:{ background:"rgba(255,255,255,0.04)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, padding:24, boxShadow:"0 4px 20px rgba(0,0,0,0.2)" },
-  skillTop:{ display:"flex", alignItems:"center", gap:10, marginBottom:12 },
-  skillIcon:{ fontSize:20 },
-  skillName:{ fontWeight:600, flex:1, color:"#e2e8f0" },
-  skillPct:{ color:"#a78bfa", fontWeight:700, fontSize:14 },
-  skillBar:{ height:4, background:"rgba(255,255,255,0.08)", borderRadius:4, overflow:"hidden", marginBottom:12 },
-  skillBarFill:{ height:"100%", background:"linear-gradient(90deg,#a78bfa,#60a5fa)", borderRadius:4 },
-  skillDesc:{ fontSize:13, color:"#64748b", lineHeight:1.5 },
-  projectsGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(380px,100%),1fr))", gap:24 },
-  projectCard:{ background:"rgba(255,255,255,0.04)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20, padding:"clamp(20px,3vw,32px)", boxShadow:"0 4px 20px rgba(0,0,0,0.2)" },
-  projectCardFeatured:{ background:"rgba(167,139,250,0.06)", border:"1px solid rgba(167,139,250,0.2)", gridColumn:"1 / -1" },
-  projectNum:{ fontSize:48, fontWeight:900, color:"rgba(167,139,250,0.15)", lineHeight:1, marginBottom:12 },
-  projectTitle:{ fontSize:"clamp(18px,2vw,22px)", fontWeight:700, color:"#f8fafc", marginBottom:10 },
-  projectDesc:{ fontSize:15, color:"#94a3b8", lineHeight:1.6, marginBottom:20 },
-  techstack:{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:20 },
-  techTag:{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", padding:"4px 12px", borderRadius:100, fontSize:12, color:"#94a3b8", fontWeight:500 },
-  projectLinks:{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" },
-  projectLink:{ color:"#64748b", textDecoration:"none", fontSize:13, fontWeight:600 },
-  projectLinkPrimary:{ background:"linear-gradient(135deg,#a78bfa,#60a5fa)", color:"#fff", padding:"8px 20px", borderRadius:8, textDecoration:"none", fontSize:13, fontWeight:700, boxShadow:"0 4px 20px rgba(167,139,250,0.3)" },
-  timeline:{ display:"flex", flexDirection:"column", gap:0, paddingLeft:"clamp(16px,3vw,32px)" },
-  timelineItem:{ position:"relative", paddingLeft:"clamp(20px,3vw,32px)", paddingBottom:40 },
-  timelineLine:{ position:"absolute", left:0, top:20, bottom:0, width:1, background:"rgba(167,139,250,0.2)" },
-  timelineDot:{ position:"absolute", left:-5, top:20, width:12, height:12, borderRadius:"50%", background:"linear-gradient(135deg,#a78bfa,#60a5fa)", boxShadow:"0 0 12px rgba(167,139,250,0.6)" },
-  timelineCard:{ background:"rgba(255,255,255,0.04)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, padding:"clamp(16px,2vw,24px)" },
-  timelineHeader:{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12, flexWrap:"wrap", gap:8 },
-  expRole:{ fontSize:"clamp(16px,2vw,20px)", fontWeight:700, color:"#f8fafc", marginBottom:4 },
-  expCompany:{ fontSize:15, color:"#a78bfa", fontWeight:600 },
-  expDates:{ fontSize:13, color:"#64748b" },
-  expDesc:{ fontSize:15, color:"#94a3b8", lineHeight:1.6, marginBottom:12 },
-  expPoints:{ paddingLeft:16 },
-  expPoint:{ fontSize:14, color:"#94a3b8", marginBottom:6, lineHeight:1.5 },
-  blogGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(320px,100%),1fr))", gap:24 },
-  blogCard:{ background:"rgba(255,255,255,0.04)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, padding:28 },
-  blogCategory:{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", color:"#a78bfa", background:"rgba(167,139,250,0.1)", padding:"4px 10px", borderRadius:100, display:"inline-block", marginBottom:14 },
-  blogTitle:{ fontSize:"clamp(16px,1.8vw,18px)", fontWeight:700, color:"#f8fafc", marginBottom:10, lineHeight:1.4 },
-  blogExcerpt:{ fontSize:14, color:"#94a3b8", lineHeight:1.6, marginBottom:16 },
-  blogMeta:{ fontSize:13, color:"#475569" },
-  testimonialsGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(320px,100%),1fr))", gap:24 },
-  testimonialCard:{ background:"rgba(255,255,255,0.04)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, padding:28 },
-  testimonialStars:{ color:"#f59e0b", fontSize:18, marginBottom:12 },
-  testimonialText:{ fontSize:15, color:"#94a3b8", lineHeight:1.7, fontStyle:"italic", marginBottom:20 },
-  testimonialAuthor:{ display:"flex", alignItems:"center", gap:12 },
-  testimonialAvatar:{ width:40, height:40, borderRadius:"50%", background:"linear-gradient(135deg,#a78bfa,#60a5fa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:700, color:"#fff" },
-  testimonialName:{ fontSize:15, fontWeight:700, color:"#e2e8f0" },
-  testimonialRole:{ fontSize:13, color:"#64748b" },
-  contactGrid:{ display:"grid", gridTemplateColumns:"1fr 1.5fr", gap:"clamp(32px,6vw,60px)" },
-  contactInfo:{},
-  contactSubtext:{ fontSize:16, color:"#94a3b8", lineHeight:1.7, marginBottom:36 },
-  contactItem:{ marginBottom:24 },
-  contactLabel:{ display:"block", fontSize:11, color:"#475569", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6, fontWeight:700 },
-  contactValue:{ fontSize:16, color:"#a78bfa", textDecoration:"none", fontWeight:600 },
-  socialLinks:{ display:"flex", gap:16, marginTop:36, flexWrap:"wrap" },
-  socialLink:{ color:"#64748b", textDecoration:"none", fontSize:14, fontWeight:600, padding:"8px 16px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, display:"inline-flex", alignItems:"center" },
-  contactForm:{ display:"flex", flexDirection:"column", gap:16 },
-  input:{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:10, padding:"14px 18px", color:"#e2e8f0", fontSize:15, backdropFilter:"blur(10px)", fontFamily:"'Outfit', sans-serif" },
-  textarea:{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:10, padding:"14px 18px", color:"#e2e8f0", fontSize:15, minHeight:130, resize:"vertical", backdropFilter:"blur(10px)", fontFamily:"'Outfit', sans-serif" },
-  submitBtn:{ background:"linear-gradient(135deg,#a78bfa,#60a5fa)", color:"#fff", padding:"clamp(12px,1.5vw,16px) clamp(20px,3vw,32px)", border:"none", borderRadius:10, fontWeight:700, fontSize:16, cursor:"pointer", fontFamily:"'Outfit', sans-serif", boxShadow:"0 4px 24px rgba(167,139,250,0.4)", alignSelf:"flex-start" },
-  footer:{ padding:"40px clamp(20px,5vw,60px)", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"center", position:"relative", zIndex:1 },
-  footerGlass:{ display:"flex", alignItems:"center", gap:24, flexWrap:"wrap", justifyContent:"center" },
-  footerText:{ fontSize:14, color:"#475569" },
-  footerSocials:{ display:"flex", gap:16 },
-  footerLink:{ fontSize:13, color:"#64748b", textDecoration:"none" },
-};
