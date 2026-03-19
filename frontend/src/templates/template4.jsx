@@ -973,11 +973,20 @@ export default function Template1() {
                   <p style={{ fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.75, marginBottom: 20 }}>
                     Have a project in mind or want to explore an opportunity? I'd love to hear from you.
                   </p>
+                  
                   {profile.email && (
                     <div className="contact-entry">
                       <div className="contact-lbl">Email</div>
                       <div className="contact-val">
                         <a href={`mailto:${profile.email}`}>{profile.email}</a>
+                      </div>
+                    </div>
+                  )}
+                  {profile.mobile && (
+                    <div className="contact-entry">
+                      <div className="contact-lbl">Mobile</div>
+                      <div className="contact-val">
+                        <a href={`https://wa.me/${profile.mobile}`}>{profile.mobile}</a>
                       </div>
                     </div>
                   )}

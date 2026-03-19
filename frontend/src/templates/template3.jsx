@@ -1148,6 +1148,12 @@ export default function Template2() {
               <a href={`mailto:${profile.email}`} className="t2-btn-ghost-white">Send an Email</a>
             )}
           </div>
+          <div className="t2-cta-btns">
+            <a href="#contact" className="t2-btn-white">Start a Project →</a>
+            {profile.mobile && (
+              <a href={`https://wa.me/${profile.mobile}`} className="t2-btn-ghost-white">Chat on Whatsapp</a>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1171,6 +1177,15 @@ export default function Template2() {
                   <div>
                     <div className="t2-contact-label">Email</div>
                     <div className="t2-contact-val"><a href={`mailto:${profile.email}`}>{profile.email}</a></div>
+                  </div>
+                </div>
+              )}
+              {profile.email && (
+                <div className="t2-contact-info-item">
+                  <div className="t2-contact-icon">📞</div>
+                  <div>
+                    <div className="t2-contact-label">Mobile</div>
+                    <div className="t2-contact-val"><a href={`https://wa.me/${profile.mobile}`}>{profile.mobile}</a></div>
                   </div>
                 </div>
               )}

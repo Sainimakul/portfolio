@@ -436,6 +436,14 @@ export default function Template1() {
                         <a href={`mailto:${profile.email}`} className="text-amber-400 hover:text-amber-300 font-semibold transition-colors">{profile.email}</a>
                       </div>
                     </div>
+                  )} {profile.mobile && (
+                    <div className="flex gap-4 mb-7">
+                      <span className="text-amber-400 text-lg mt-0.5">✉</span>
+                      <div>
+                        <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-slate-600 mb-1">Mobile</div>
+                        <a href={`mailto:${profile.mobile}`} className="text-amber-400 hover:text-amber-300 font-semibold transition-colors">{profile.email}</a>
+                      </div>
+                    </div>
                   )}
                   {profile.location && (
                     <div className="flex gap-4 mb-10">

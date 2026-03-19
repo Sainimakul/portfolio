@@ -105,6 +105,7 @@ exports.updateProfile = async (req, res) => {
       bio,
       location,
       email,
+      mobile,
       linkedin,
       github,
       status,
@@ -125,7 +126,8 @@ exports.updateProfile = async (req, res) => {
            status=$8,
            projects_count=$9,
            tech_stack_count=$10,
-           template_id=$11
+           template_id=$11,
+           mobile=$12
        WHERE id=1`,
       [
         name,
@@ -138,7 +140,8 @@ exports.updateProfile = async (req, res) => {
         status,
         projects_count,
         tech_stack_count,
-        template_id
+        template_id,
+        mobile
       ]
     );
 

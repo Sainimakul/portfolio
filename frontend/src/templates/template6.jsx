@@ -308,6 +308,13 @@ export default function Template6() {
                   {...track("contact_info_click", { type: "email" })}>{profile.email}</a>
               </div>
             )}
+            {profile.mobile && (
+              <div className="mb-3">
+                <span className="text-[#ffd600] text-sm font-bold tracking-widest mr-2">MOBILE:</span>
+                <a href={`https://wa.me/${profile.mobile}`} className="text-white text-sm hover:text-[#ffd600] transition-colors"
+                  {...track("contact_info_click", { type: "mobile" })}>{profile.mobile}</a>
+              </div>
+            )}
             {profile.location && (
               <div className="mb-8">
                 <span className="text-[#ffd600] text-sm font-bold tracking-widest mr-2">LOCATION:</span>

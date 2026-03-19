@@ -405,6 +405,17 @@ export default function Template2() {
                   </div>
                 </Card>
               )}
+              {profile.mobile && (
+                <Card className="p-5 flex items-center gap-4 anim-fadeUp" style={{animationDelay:".44s"}}>
+                  <div className="w-10 h-10 rounded-xl bg-[#1E3A5F] flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#3B82F6]">📞</span>
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="text-xs text-slate-600 mb-0.5 font-semibold tracking-wide">MOBILE</div>
+                    <a href={`mailto:${profile.mobile}`} className="text-sm text-[#3B82F6] hover:underline truncate block">{profile.mobile}</a>
+                  </div>
+                </Card>
+              )}
             </div>
 
           </div>
@@ -665,6 +676,15 @@ export default function Template2() {
                         <div>
                           <div className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-0.5">Email</div>
                           <a href={`mailto:${profile.email}`} className="text-sm text-[#3B82F6] hover:underline">{profile.email}</a>
+                        </div>
+                      </div>
+                    )}
+                    {profile.mobile && (
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-9 h-9 rounded-lg bg-[#1E3A5F] border border-[#3B82F6]/20 flex items-center justify-center text-sm text-[#3B82F6] flex-shrink-0">✉</div>
+                        <div>
+                          <div className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-0.5">Mobile</div>
+                          <a href={`mailto:${profile.mobile}`} className="text-sm text-[#3B82F6] hover:underline">{profile.mobile}</a>
                         </div>
                       </div>
                     )}

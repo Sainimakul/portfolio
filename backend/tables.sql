@@ -123,6 +123,7 @@ create table public.users (
   bio text null,
   location text null,
   email text null,
+  mobile text null,
   linkedin text null,
   github text null,
   status text null,

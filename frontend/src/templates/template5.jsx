@@ -1594,6 +1594,14 @@ export default function Template1() {
                       </div>
                     </div>
                   )}
+                  {profile.mobile && (
+                    <div className="contact-detail">
+                      <div className="contact-label">MOBILE</div>
+                      <div className="contact-value">
+                        <a href={`https://wa.me/${profile.mobile}`}>{profile.mobile}</a>
+                      </div>
+                    </div>
+                  )}
 
                   {profile.location && (
                     <div className="contact-detail">
