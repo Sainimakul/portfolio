@@ -76,18 +76,11 @@ export default function Testimonials() {
           <h2 className="text-2xl font-bold text-gray-800">Testimonials</h2>
           <p className="text-gray-500 text-sm">Client reviews and feedback</p>
         </div>
-        <button
-          onClick={() => {
-            setForm({ name: "", role: "", company: "", review: "", rating: 5 });
-            setModal(true);
-          }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm sm:w-auto w-full"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Testimonial
-        </button>
+<button onClick={() => {             setForm({ name: "", role: "", company: "", review: "", rating: 5 });
+; setModal(true); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm sm:w-auto w-full">
+  <span className="material-icons text-sm">add</span>
+  Add Testimonial
+</button>
       </div>
 
       {/* Loading */}
@@ -170,14 +163,9 @@ export default function Testimonials() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(t.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0h10" />
-                    </svg>
-                  </button>
+<button onClick={() => handleDelete(t.id)} className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+  <span className="material-icons text-xl">delete</span>
+</button>
                 </div>
 
                 <div className="text-yellow-500 text-sm mb-3">{stars(t.rating)}</div>

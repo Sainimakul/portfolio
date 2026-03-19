@@ -30,6 +30,25 @@ export function Modal({ title, onClose, children, size = "md" }) {
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
     >
+      <style>{`
+        @keyframes slide-up {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+        @media (min-width: 640px) {
+          .animate-slide-up {
+            animation: fade-in 0.2s ease-out;
+          }
+        }
+      `}</style>
+
       <div
         onClick={(e) => e.stopPropagation()}
         className={`
@@ -37,7 +56,7 @@ export function Modal({ title, onClose, children, size = "md" }) {
           bg-white rounded-t-2xl sm:rounded-xl 
           border border-gray-200
           shadow-xl
-          animate-slide-up sm:animate-fade-in
+          animate-slide-up
           max-h-[90vh] flex flex-col
         `}
       >
@@ -53,9 +72,7 @@ export function Modal({ title, onClose, children, size = "md" }) {
                      text-gray-500 hover:text-gray-700
                      transition-all"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <span className="material-icons text-lg">close</span>
           </button>
         </div>
 
@@ -64,42 +81,20 @@ export function Modal({ title, onClose, children, size = "md" }) {
           {children}
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes slide-up {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-        
-        @keyframes fade-in {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-        
-        @media (min-width: 640px) {
-          .animate-slide-up {
-            animation: fade-in 0.2s ease-out;
-          }
-        }
-      `}</style>
     </div>
   );
 }
 
 // Confirmation Modal
-export function ConfirmModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title = "Confirm Action", 
+export function ConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = "Confirm Action",
   message = "Are you sure you want to proceed?",
   confirmText = "Confirm",
   cancelText = "Cancel",
-  variant = "danger" 
+  variant = "danger"
 }) {
   if (!isOpen) return null;
 
@@ -121,22 +116,20 @@ export function ConfirmModal({
     }
   };
 
+  const variantIcons = {
+    danger: "warning",
+    warning: "info",
+    info: "info"
+  };
+
   return (
     <Modal title={title} onClose={onClose} size="sm">
       <div className="space-y-6">
         <div className="flex flex-col items-center text-center space-y-3">
           <div className={`w-16 h-16 rounded-full ${variantClasses[variant].bg} flex items-center justify-center`}>
-            <svg className={`w-8 h-8 ${variantClasses[variant].icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {variant === "danger" && (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              )}
-              {variant === "warning" && (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              )}
-              {variant === "info" && (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              )}
-            </svg>
+            <span className={`material-icons text-4xl ${variantClasses[variant].icon}`}>
+              {variantIcons[variant]}
+            </span>
           </div>
           <p className="text-gray-600">{message}</p>
         </div>
