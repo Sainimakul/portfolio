@@ -155,26 +155,6 @@ function AdminApp({ onLogout }) {
       <main className="flex-1 overflow-y-auto bg-gray-50">
         <div className="lg:hidden h-16"></div>
 
-        {/* Page Header */}
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-800">
-                {navigation.find((n) => n.id === page)?.label || "Dashboard"}
-              </h1>
-              <span className="text-sm text-gray-400">/ overview</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <span className="material-icons text-gray-600">notifications</span>
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <span className="material-icons text-gray-600">share</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Page Content */}
         <div className="p-6">
           <div className="max-w-7xl mx-auto">
