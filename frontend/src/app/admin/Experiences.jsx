@@ -25,7 +25,7 @@ export default function Experiences() {
     description: "",
     start_date: "",
     end_date: "",
-    is_current: false,
+    is_current: "false",
     points: []
   });
   const [saving, setSaving] = useState(false);
@@ -51,7 +51,7 @@ export default function Experiences() {
       description: "",
       start_date: "",
       end_date: "",
-      is_current: false,
+      is_current: "false",
       points: []
     });
     setModal("add");
@@ -81,7 +81,7 @@ export default function Experiences() {
     try {
       const payload = {
         ...form,
-        end_date: form.is_current ? null : form.end_date,
+        end_date: form.is_current === "true" ? null : form.end_date,
         points: form.points || []
       };
 
@@ -155,7 +155,7 @@ export default function Experiences() {
                     </td>
                     <td className="px-6 py-4 text-gray-600">{exp.company}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {exp.start_date?.substring(0, 10)} - {exp.is_current ? "Present" : exp.end_date?.substring(0, 10)}
+                      {exp.start_date?.substring(0, 10)} - {exp.is_current == "true" ? "Present" : exp.end_date?.substring(0, 10)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
                       {truncate(exp.description, 80)}
@@ -202,7 +202,7 @@ export default function Experiences() {
                       <h3 className="font-semibold text-gray-800">{exp.role}</h3>
                       <p className="text-sm text-gray-600">{exp.company}</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {exp.start_date?.substring(0, 10)} → {exp.is_current ? "Present" : exp.end_date?.substring(0, 10)}
+                        {exp.start_date?.substring(0, 10)} → {exp.is_current == "true" ? "Present" : exp.end_date?.substring(0, 10)}
                       </p>
                     </div>
 
@@ -298,7 +298,7 @@ export default function Experiences() {
                   type="date"
                   value={form.end_date}
                   onChange={e => setForm({ ...form, end_date: e.target.value })}
-                  disabled={form.is_current}
+                  disabled={form.is_current == "true"}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
@@ -308,9 +308,14 @@ export default function Experiences() {
               <input
                 type="checkbox"
                 id="is_current"
-                checked={form.is_current}
-                onChange={e => setForm({ ...form, is_current: e.target.checked })}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                checked={form.is_current == "true"}
+onChange={e =>
+  setForm({
+    ...form,
+    is_current: e.target.checked ? "true" : "false"
+  })
+}
+               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <label htmlFor="is_current" className="text-sm text-gray-700">Currently working here</label>
             </div>

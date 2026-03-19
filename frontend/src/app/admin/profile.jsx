@@ -183,7 +183,7 @@ export default function Profile() {
                 key={t.id}
                 onClick={() => setProfile({ ...profile, template_id: t.id })}
                 className={`border rounded-xl p-4 cursor-pointer transition-all ${
-                  profile.template_id === t.id
+                  profile.template_id == t.id
                     ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
                     : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
                 }`}
