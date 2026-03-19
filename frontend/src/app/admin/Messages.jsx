@@ -1,13 +1,13 @@
 "use client"
 import React, { useState, useEffect, useCallback } from "react"
 import { getMessages, deleteMessage, sendReply } from "../../../service/adminapi"
-import { toast } from "./component/Toast"
 import { Modal } from "./component/Modal"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import TextAlign from "@tiptap/extension-text-align"
 import Link from "@tiptap/extension-link"
+import { success, error } from "../../util/toast";
 
 /* ─────────────────────── helpers ─────────────────────── */
 function formatDate(dateStr) {
@@ -318,7 +318,7 @@ export default function Messages() {
       const res = await getMessages()
       setItems(res.data || [])
     } catch (err) {
-      toast.error(err.message)
+      error(err.message)
     } finally {
       setLoading(false)
     }
@@ -329,7 +329,7 @@ export default function Messages() {
   async function handleDelete(id) {
     if (!confirm("Delete this message?")) return
     await deleteMessage(id)
-    toast.success("Deleted")
+    success("Deleted")
     setSelected(null)
     load()
   }
@@ -339,11 +339,12 @@ export default function Messages() {
     setSending(true)
     try {
       await sendReply({ id: selected.id,email: selected.email, subject: `Re: ${selected.subject || "Your message"}`, message: reply })
-      toast.success("Reply sent!")
+      success("Reply sent!")
       setSelected(null)
       setReply("")
+      await load()
     } catch (err) {
-      toast.error(err.message)
+      error(err.message)
     } finally {
       setSending(false)
     }

@@ -51,6 +51,10 @@ https://your-portfolio-url.com
 
 * JWT (JSON Web Tokens)
 
+## Email Replies
+
+* Sender
+
 ---
 
 # Installation
@@ -90,6 +94,7 @@ Add the following variables
 PORT=YourPort
 DATABASE_URL=urlofdatabasse
 JWT_SECRET=your_secret_key
+RESEND_API_KEY=Resendapikey
 ```
 
 Start backend server
