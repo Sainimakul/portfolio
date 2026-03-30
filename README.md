@@ -9,7 +9,7 @@ This project is built using **React / Next.js for the frontend**, **Node.js & Ex
 
 ## Live Demo
 
-https://your-portfolio-url.com](https://web.portfolio.makulsaini.online
+https://web.portfolio.makulsaini.online
 
 ---
 
